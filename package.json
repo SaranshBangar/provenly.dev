@@ -1,0 +1,40 @@
+{
+  "name": "provenly",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "cf:build": "opennextjs-cloudflare build",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 migrations apply provenly-db --local",
+    "db:migrate:remote": "wrangler d1 migrations apply provenly-db --remote"
+  },
+  "dependencies": {
+    "better-auth": "^1.6.18",
+    "drizzle-orm": "^0.45.2",
+    "html-to-image": "^1.11.13",
+    "jspdf": "^4.2.1",
+    "next": "15.5.19",
+    "papaparse": "^5.5.3",
+    "qrcode": "^1.5.4",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250101.0",
+    "@opennextjs/cloudflare": "^1.19.11",
+    "@types/node": "^22.10.0",
+    "@types/papaparse": "^5.3.15",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "drizzle-kit": "^0.31.10",
+    "typescript": "^5.7.0",
+    "wrangler": "^4.100.0"
+  }
+}

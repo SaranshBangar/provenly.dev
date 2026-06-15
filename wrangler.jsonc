@@ -1,0 +1,37 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "provenly",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-03-25",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": true,
+  "assets": {
+    "binding": "ASSETS",
+    "directory": ".open-next/assets"
+  },
+  "routes": [
+    { "pattern": "provenly.dev", "custom_domain": true },
+    { "pattern": "www.provenly.dev", "custom_domain": true }
+  ],
+  "observability": {
+    "enabled": true
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "provenly-db",
+      "database_id": "8dd62996-7345-4700-a520-2758b552c0e3",
+      "migrations_dir": "drizzle/migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "BUCKET",
+      "bucket_name": "provenly-assets"
+    }
+  ],
+  "vars": {
+    "NEXT_PUBLIC_APP_URL": "https://provenly.dev",
+    "CASHFREE_ENV": "sandbox"
+  }
+}
