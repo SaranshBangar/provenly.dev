@@ -136,6 +136,7 @@ export function UploadClient({ credits, initials }: { credits: number; initials:
   const enough = credits >= count && count > 0;
 
   const issue = async () => {
+    if (!window.confirm(`Issue ${count} certificate${count === 1 ? "" : "s"}? This uses ${count} real credit${count === 1 ? "" : "s"} from your balance.`)) return;
     setError("");
     setIssuing(true);
     try {

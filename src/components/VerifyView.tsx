@@ -3,11 +3,10 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Icon } from "./Icon";
 import { Logo } from "./Logo";
-import { Seal } from "./Seal";
 import { QRCode } from "./QRCode";
 import { CopyButton } from "./CopyButton";
 import { CertificateFrame } from "./CertificateFrame";
-import { Confetti } from "./Confetti";
+import { ConfettiCannons } from "./Confetti";
 import { fmtDate, verifyUrl } from "@/lib/cert";
 import type { CertData } from "@/db/schema";
 
@@ -53,15 +52,14 @@ export function VerifyView({
           color: "#fff",
         }}
       >
-        {phase === 1 && valid && <Confetti n={80} />}
+        {phase === 1 && valid && <ConfettiCannons n={110} />}
         <div className="container" style={{ position: "relative", padding: "52px 24px 56px", textAlign: "center" }}>
           <div style={{ width: 130, height: 130, margin: "0 auto 18px", position: "relative" }}>
-            {phase === 1 && valid && [0, 1].map((i) => <div key={i} style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "2px solid rgba(255,255,255,.6)", animation: `ring-pulse 2.4s ${i * 1.1}s ease-out infinite` }} />)}
             {phase === 0 ? (
               <div style={{ width: 130, height: 130, borderRadius: "50%", border: "5px solid rgba(255,255,255,.2)", borderTopColor: "#fff", animation: "spin 1s linear infinite" }} />
             ) : valid ? (
               <div style={{ animation: "sealdrop .8s cubic-bezier(.2,.8,.3,1.1) both" }}>
-                <Seal size={130} color="#0b8a5f" ring="#C79A3A" label="VERIFIED" drawCheck />
+                <img src="/provenly-mark.svg" alt="Provenly verified" width={130} height={130} style={{ display: "block", width: 130, height: 130 }} />
               </div>
             ) : (
               <div style={{ width: 130, height: 130, borderRadius: "50%", background: "rgba(255,255,255,.14)", display: "grid", placeItems: "center", animation: "pop-in .5s both" }}>

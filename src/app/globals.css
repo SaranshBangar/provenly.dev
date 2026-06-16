@@ -162,6 +162,11 @@ p { margin: 0; }
 }
 @keyframes ring-pulse { 0% { transform: scale(.8); opacity:.5; } 100% { transform: scale(1.8); opacity:0; } }
 @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(420px) rotate(540deg); opacity: 0; } }
+@keyframes cannon-burst {
+  0%   { transform: translate(0,0) rotate(0); opacity: 1; }
+  55%  { transform: translate(calc(var(--tx) * .65), var(--ty)) rotate(calc(var(--r) * .6)); opacity: 1; }
+  100% { transform: translate(var(--tx), 80px) rotate(var(--r)); opacity: 0; }
+}
 
 .anim-fade-up { animation: fade-up .6s cubic-bezier(.2,.7,.3,1) both; }
 .anim-pop { animation: pop-in .5s cubic-bezier(.2,.8,.3,1.2) both; }

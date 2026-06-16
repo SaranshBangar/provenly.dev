@@ -1,6 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Icon, type IconName } from "./Icon";
 import { avatarColor, initialsOf } from "@/lib/util";
 
@@ -19,14 +20,56 @@ const STATUS: Record<CertRow["status"], { label: string; cls: string; icon: Icon
   revoked: { label: "Revoked", cls: "chip", icon: "x", style: { background: "var(--danger-tint)", color: "var(--danger)" } },
 };
 
+const PAGE_SIZES = [10, 20, 50, 100];
+
 export function DashboardTable({ certs }: { certs: CertRow[] }) {
+  const router = useRouter();
   const [filter, setFilter] = useState<"all" | CertRow["status"]>("all");
   const [q, setQ] = useState("");
-  const rows = certs.filter(
+  const [pageSize, setPageSize] = useState(10);
+  const [page, setPage] = useState(1);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  // Search + filter run over the whole dataset, not just the visible page.
+  const filtered = certs.filter(
     (c) =>
       (filter === "all" || c.status === filter) &&
       (c.recipientName.toLowerCase().includes(q.toLowerCase()) || c.id.toLowerCase().includes(q.toLowerCase())),
   );
+
+  // Any change to the result set or page size sends us back to page 1.
+  useEffect(() => setPage(1), [filter, q, pageSize]);
+
+  const total = filtered.length;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const current = Math.min(page, pageCount);
+  const start = (current - 1) * pageSize;
+  const visible = filtered.slice(start, start + pageSize);
+
+  const toggle = async (c: CertRow) => {
+    const revoking = c.status !== "revoked";
+    if (
+      revoking &&
+      !window.confirm(
+        `Revoke the certificate for ${c.recipientName}?\n\nIts public verify page will immediately show as "revoked". You can restore it to normal later.`,
+      )
+    )
+      return;
+    setBusy(c.id);
+    try {
+      const res = await fetch(`/api/certificates/${c.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: revoking ? "revoked" : "verified" }),
+      });
+      if (!res.ok) throw new Error();
+      router.refresh();
+    } catch {
+      alert("Could not update the certificate. Please try again.");
+    } finally {
+      setBusy(null);
+    }
+  };
 
   return (
     <div className="card" style={{ overflow: "hidden" }}>
@@ -44,7 +87,7 @@ export function DashboardTable({ certs }: { certs: CertRow[] }) {
       </div>
 
       <div className="scroll" style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 820 }}>
           <thead>
             <tr style={{ textAlign: "left", color: "var(--ink-3)", fontSize: 12.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em" }}>
               <th style={{ padding: "12px 18px" }}>Recipient</th>
@@ -53,16 +96,17 @@ export function DashboardTable({ certs }: { certs: CertRow[] }) {
               <th style={{ padding: "12px 18px" }}>Status</th>
               <th style={{ padding: "12px 18px" }}>Views</th>
               <th style={{ padding: "12px 18px", textAlign: "right" }}>Verify</th>
+              <th style={{ padding: "12px 18px", textAlign: "right" }}>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((c, i) => {
+            {visible.map((c, i) => {
               const st = STATUS[c.status];
               return (
                 <tr key={c.id} style={{ borderTop: "1px solid var(--line)" }}>
                   <td style={{ padding: "14px 18px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
-                      <div style={{ width: 34, height: 34, borderRadius: 99, background: avatarColor(i), color: "#fff", display: "grid", placeItems: "center", fontWeight: 700, fontSize: 13 }}>{initialsOf(c.recipientName)}</div>
+                      <div style={{ width: 34, height: 34, borderRadius: 99, background: avatarColor(start + i), color: "#fff", display: "grid", placeItems: "center", fontWeight: 700, fontSize: 13 }}>{initialsOf(c.recipientName)}</div>
                       <div>
                         <div style={{ fontWeight: 700, fontSize: 14.5 }}>{c.recipientName}</div>
                         <div className="muted" style={{ fontSize: 12.5 }}>{c.eventName}</div>
@@ -78,15 +122,46 @@ export function DashboardTable({ certs }: { certs: CertRow[] }) {
                       <Icon name="link" size={15} /> Open
                     </Link>
                   </td>
+                  <td style={{ padding: "14px 18px", textAlign: "right" }}>
+                    {c.status === "draft" ? (
+                      <span className="muted" style={{ fontSize: 13 }}>—</span>
+                    ) : c.status === "revoked" ? (
+                      <button onClick={() => toggle(c)} disabled={busy === c.id} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13.5, fontWeight: 600, color: "var(--green-700)", opacity: busy === c.id ? 0.5 : 1 }}>
+                        <Icon name="check" size={15} /> Restore
+                      </button>
+                    ) : (
+                      <button onClick={() => toggle(c)} disabled={busy === c.id} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13.5, fontWeight: 600, color: "var(--danger)", opacity: busy === c.id ? 0.5 : 1 }}>
+                        <Icon name="x" size={15} /> Revoke
+                      </button>
+                    )}
+                  </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
-      {rows.length === 0 && (
+
+      {total === 0 ? (
         <div style={{ padding: 50, textAlign: "center", color: "var(--ink-4)" }}>
           {certs.length === 0 ? "No certificates yet, create your first one." : "No certificates match your filter."}
+        </div>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 18px", borderTop: "1px solid var(--line)", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13.5, color: "var(--ink-3)" }}>
+            <span>Rows per page</span>
+            <select className="select" value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} style={{ height: 34, width: "auto", padding: "0 28px 0 10px", fontSize: 13.5 }}>
+              {PAGE_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <span style={{ fontSize: 13.5, color: "var(--ink-3)", marginLeft: "auto" }}>
+            {start + 1}–{Math.min(start + pageSize, total)} of {total}
+          </span>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button className="btn btn-ghost btn-sm" onClick={() => setPage(current - 1)} disabled={current <= 1}><Icon name="arrowL" size={15} /> Prev</button>
+            <span style={{ display: "inline-flex", alignItems: "center", padding: "0 10px", fontSize: 13.5, fontWeight: 600, color: "var(--ink-2)" }}>{current} / {pageCount}</span>
+            <button className="btn btn-ghost btn-sm" onClick={() => setPage(current + 1)} disabled={current >= pageCount}>Next <Icon name="arrow" size={15} /></button>
+          </div>
         </div>
       )}
     </div>
