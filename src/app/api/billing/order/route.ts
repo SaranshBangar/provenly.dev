@@ -40,7 +40,7 @@ export async function POST(req: Request) {
   const base = appUrl(req);
 
   if (!isCashfreeConfigured()) {
-    // MOCK mode — no live keys. Simulate payment via a local confirm route.
+    // MOCK mode, no live keys. Simulate payment via a local confirm route.
     return NextResponse.json({ mode: "mock", mockUrl: `/api/billing/mock?order_id=${encodeURIComponent(orderId)}` });
   }
 

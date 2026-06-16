@@ -32,6 +32,6 @@
   ],
   "vars": {
     "NEXT_PUBLIC_APP_URL": "https://provenly.dev",
-    "CASHFREE_ENV": "sandbox"
+    "CASHFREE_ENV": "production"
   }
 }

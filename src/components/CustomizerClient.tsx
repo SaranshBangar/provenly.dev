@@ -158,7 +158,7 @@ export function CustomizerClient({ credits, initials }: { credits: number; initi
 
           <Section icon="palette" title="Branding" sub="Logo, color, font" open={open === "brand"} onToggle={() => toggle("brand")}>
             <TF label="Organization name" value={cert.orgName} onChange={(v) => update({ orgName: v })} />
-            <ImageUpload label="Organization logo" value={cert.logo} onChange={(v) => update({ logo: v })} hint="Shown at the top — transparent PNG ideal" />
+            <ImageUpload label="Organization logo" value={cert.logo} onChange={(v) => update({ logo: v })} hint="Shown at the top, transparent PNG ideal" />
             <div className="field"><label>Brand color</label>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                 {BRAND_SWATCHES.map((c) => (
@@ -213,14 +213,14 @@ export function CustomizerClient({ credits, initials }: { credits: number; initi
               </button>
               <span style={{ fontSize: 14, fontWeight: 600 }}>Show grade / score</span>
             </label>
-            {cert.showGrade && <TF value={cert.grade} onChange={(v) => update({ grade: v })} placeholder="e.g. Distinction — 96%" />}
+            {cert.showGrade && <TF value={cert.grade} onChange={(v) => update({ grade: v })} placeholder="e.g. Distinction, 96%" />}
             <div className="field"><label>Skill / competency tags</label>
               <TagEditor tags={cert.skills} onChange={(v) => update({ skills: v })} />
             </div>
           </Section>
 
           <Section icon="tag" title="Custom fields" sub="Your own key / value pairs" open={open === "custom"} onToggle={() => toggle("custom")} badge="differentiator">
-            <p className="muted" style={{ fontSize: 13, marginTop: -2 }}>Add anything unique to your program — cohort, credits, license number, hours.</p>
+            <p className="muted" style={{ fontSize: 13, marginTop: -2 }}>Add anything unique to your program, cohort, credits, license number, hours.</p>
             {(cert.customFields || []).map((f, i) => (
               <div key={i} style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <input className="input" placeholder="Label" value={f.key} onChange={(e) => setCF(i, { key: e.target.value })} style={{ height: 40 }} />

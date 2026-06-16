@@ -15,6 +15,7 @@
     "db:migrate:remote": "wrangler d1 migrations apply provenly-db --remote"
   },
   "dependencies": {
+    "@better-auth/infra": "^0.2.14",
     "better-auth": "^1.6.18",
     "drizzle-orm": "^0.45.2",
     "html-to-image": "^1.11.13",

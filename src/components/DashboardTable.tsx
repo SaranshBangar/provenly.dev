@@ -86,7 +86,7 @@ export function DashboardTable({ certs }: { certs: CertRow[] }) {
       </div>
       {rows.length === 0 && (
         <div style={{ padding: 50, textAlign: "center", color: "var(--ink-4)" }}>
-          {certs.length === 0 ? "No certificates yet — create your first one." : "No certificates match your filter."}
+          {certs.length === 0 ? "No certificates yet, create your first one." : "No certificates match your filter."}
         </div>
       )}
     </div>

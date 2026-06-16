@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100" role="img" aria-label="Provenly">
+  <path d="M100.00 50.00 L96.13 56.63 L97.97 64.09 L92.39 69.36 L92.06 77.03 L85.22 80.52 L82.74 87.79 L75.19 89.20 L70.77 95.48 L63.13 94.71 L57.12 99.49 L50.00 96.60 L42.88 99.49 L36.87 94.71 L29.23 95.48 L24.81 89.20 L17.26 87.79 L14.78 80.52 L7.94 77.03 L7.61 69.36 L2.03 64.09 L3.87 56.63 L0.00 50.00 L3.87 43.37 L2.03 35.91 L7.61 30.64 L7.94 22.97 L14.78 19.48 L17.26 12.21 L24.81 10.80 L29.23 4.52 L36.87 5.29 L42.88 0.51 L50.00 3.40 L57.12 0.51 L63.13 5.29 L70.77 4.52 L75.19 10.80 L82.74 12.21 L85.22 19.48 L92.06 22.97 L92.39 30.64 L97.97 35.91 L96.13 43.37 Z" fill="#C79A3A"></path>
+  <circle cx="50" cy="50" r="42" fill="#0E9F6E"></circle>
+  <circle cx="50" cy="50" r="35.5" fill="none" stroke="#ffffff" stroke-opacity="0.55" stroke-width="1.2"></circle>
+  <polyline points="36 51 46 61 65 39" fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"></polyline>
+</svg>

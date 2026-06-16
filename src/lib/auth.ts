@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { getDb, schema } from "@/db";
+import { dash } from "@better-auth/infra";
 
 /**
  * Better Auth instance. Built per-request because Cloudflare bindings/secrets
@@ -11,8 +12,7 @@ export function getAuth() {
   const { env } = getCloudflareContext();
   const db = getDb();
 
-  const baseURL =
-    env.BETTER_AUTH_URL || env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const baseURL = env.BETTER_AUTH_URL || env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
   const hasGoogle = !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
 
@@ -71,6 +71,7 @@ export function getAuth() {
         },
       },
     },
+    plugins: [dash()],
   });
 }
 

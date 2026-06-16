@@ -33,7 +33,7 @@ export const DEFAULT_CERT: CertData = {
   template: "classic",
   orientation: "landscape",
   title: "Certificate of Completion",
-  recipientName: "Amara Okafor",
+  recipientName: "Jane Doe",
   recipientEmail: "",
   eventName: "Full-Stack Web Development Bootcamp",
   bodyText:
@@ -42,14 +42,14 @@ export const DEFAULT_CERT: CertData = {
   expiryDate: "",
   brandColor: "#0E9F6E",
   font: "Source Serif 4",
-  orgName: "Meridian Academy",
+  orgName: "Acme Academy",
   logo: null,
   seal: "verified",
   signatures: [
-    { name: "Dr. Lena Hart", title: "Program Director", image: null },
-    { name: "Marco Velez", title: "Lead Instructor", image: null },
+    { name: "Jane Doe", title: "Program Director", image: null },
+    { name: "John Doe", title: "Lead Instructor", image: null },
   ],
-  grade: "Distinction — 96%",
+  grade: "Distinction, 96%",
   showGrade: true,
   skills: ["React", "Node.js", "PostgreSQL", "System Design"],
   customFields: [

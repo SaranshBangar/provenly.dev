@@ -6,7 +6,7 @@ import { isCashfreeConfigured } from "@/lib/cashfree";
 export const dynamic = "force-dynamic";
 
 /**
- * MOCK payment confirmation — only available when Cashfree is NOT configured.
+ * MOCK payment confirmation, only available when Cashfree is NOT configured.
  * Simulates a successful payment so the full credit flow is testable locally.
  */
 export async function GET(req: Request) {

@@ -16,14 +16,14 @@ type Row = Record<string, string>;
 
 const SAMPLE_COLUMNS = ["Full Name", "Email", "Course", "Score", "Cohort"];
 const SAMPLE_ROWS: Row[] = [
-  { "Full Name": "Amara Okafor", Email: "amara@mail.com", Course: "Full-Stack Web Dev", Score: "96%", Cohort: "Spring 2026" },
-  { "Full Name": "Jonah Reyes", Email: "jonah@mail.com", Course: "Full-Stack Web Dev", Score: "88%", Cohort: "Spring 2026" },
-  { "Full Name": "Priya Nair", Email: "priya@mail.com", Course: "Full-Stack Web Dev", Score: "92%", Cohort: "Spring 2026" },
-  { "Full Name": "Diego Santos", Email: "diego@mail.com", Course: "Full-Stack Web Dev", Score: "79%", Cohort: "Spring 2026" },
-  { "Full Name": "Mei Lin", Email: "mei@mail.com", Course: "Full-Stack Web Dev", Score: "94%", Cohort: "Spring 2026" },
-  { "Full Name": "Omar Haddad", Email: "omar@mail.com", Course: "Full-Stack Web Dev", Score: "85%", Cohort: "Spring 2026" },
-  { "Full Name": "Sofia Bauer", Email: "sofia@mail.com", Course: "Full-Stack Web Dev", Score: "91%", Cohort: "Spring 2026" },
-  { "Full Name": "Liam Walsh", Email: "liam@mail.com", Course: "Full-Stack Web Dev", Score: "83%", Cohort: "Spring 2026" },
+  { "Full Name": "Jane Doe", Email: "jane@example.com", Course: "Full-Stack Web Dev", Score: "96%", Cohort: "Spring 2026" },
+  { "Full Name": "John Doe", Email: "john@example.com", Course: "Full-Stack Web Dev", Score: "88%", Cohort: "Spring 2026" },
+  { "Full Name": "Alex Smith", Email: "alex@example.com", Course: "Full-Stack Web Dev", Score: "92%", Cohort: "Spring 2026" },
+  { "Full Name": "Sam Lee", Email: "sam@example.com", Course: "Full-Stack Web Dev", Score: "79%", Cohort: "Spring 2026" },
+  { "Full Name": "Taylor Brown", Email: "taylor@example.com", Course: "Full-Stack Web Dev", Score: "94%", Cohort: "Spring 2026" },
+  { "Full Name": "Jordan Park", Email: "jordan@example.com", Course: "Full-Stack Web Dev", Score: "85%", Cohort: "Spring 2026" },
+  { "Full Name": "Casey Kim", Email: "casey@example.com", Course: "Full-Stack Web Dev", Score: "91%", Cohort: "Spring 2026" },
+  { "Full Name": "Morgan Cruz", Email: "morgan@example.com", Course: "Full-Stack Web Dev", Score: "83%", Cohort: "Spring 2026" },
 ];
 
 const MAP_FIELDS: { key: string; label: string; icon: IconName; required: boolean }[] = [
@@ -213,7 +213,7 @@ export function UploadClient({ credits, initials }: { credits: number; initials:
                     </div>
                     <Icon name="arrow" size={18} style={{ color: "var(--ink-4)" }} />
                     <select className="select" value={mapping[f.key] || ""} onChange={(e) => setMapping((m) => ({ ...m, [f.key]: e.target.value }))}>
-                      <option value="">— Not mapped —</option>
+                      <option value="">Not mapped</option>
                       {columns.map((c) => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
@@ -227,7 +227,7 @@ export function UploadClient({ credits, initials }: { credits: number; initials:
 
             <div className="card" style={{ padding: 20, position: "sticky", top: 84, alignSelf: "start" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13.5, fontWeight: 700, color: "var(--ink-2)", marginBottom: 14 }}>
-                <span style={{ width: 8, height: 8, borderRadius: 99, background: "var(--green)" }} /> Live preview — row 1
+                <span style={{ width: 8, height: 8, borderRadius: 99, background: "var(--green)" }} /> Live preview, row 1
               </div>
               <CertificateFrame cert={previewCert} verifyUrl={verifyUrl(cert.serial)} />
               <p className="muted" style={{ fontSize: 12.5, marginTop: 12, textAlign: "center" }}>Each row generates its own unique ID &amp; verify page.</p>

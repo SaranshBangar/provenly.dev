@@ -87,7 +87,7 @@ export default function Landing() {
               .
             </h1>
             <p style={{ fontSize: 19, color: "var(--ink-3)", marginTop: 24, maxWidth: 480, lineHeight: 1.55, animation: "fade-up .6s .1s both" }}>
-              Design beautiful certificates, issue them in bulk, and give every recipient a public verification page. One scan proves it&apos;s real — forever.
+              Design beautiful certificates, issue them in bulk, and give every recipient a public verification page. One scan proves it&apos;s real, forever.
             </p>
             <div style={{ display: "flex", gap: 12, marginTop: 32, flexWrap: "wrap", animation: "fade-up .6s .15s both" }}>
               <Link className="btn btn-primary btn-lg" href="/login">Start issuing free <Icon name="arrow" size={18} /></Link>
@@ -112,10 +112,10 @@ export default function Landing() {
               </div>
             </div>
             <div style={{ animation: "floaty 6s ease-in-out infinite" }}>
-              <FloatingCert accent="var(--green)" title="Completion" name="Amara Okafor" style={{ top: 10, left: -10, transform: "rotate(-7deg)" }} />
+              <FloatingCert accent="var(--green)" title="Completion" name="Jane Doe" style={{ top: 10, left: -10, transform: "rotate(-7deg)" }} />
             </div>
             <div style={{ animation: "floaty 7s ease-in-out .8s infinite" }}>
-              <FloatingCert accent="var(--gold)" title="Achievement" name="Jonah Reyes" style={{ bottom: 16, right: -16, transform: "rotate(6deg)" }} />
+              <FloatingCert accent="var(--gold)" title="Achievement" name="John Doe" style={{ bottom: 16, right: -16, transform: "rotate(6deg)" }} />
             </div>
           </div>
         </div>
@@ -124,7 +124,7 @@ export default function Landing() {
       <section className="container" style={{ paddingBottom: 30 }}>
         <p style={{ textAlign: "center", fontSize: 13, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "var(--ink-4)", marginBottom: 22 }}>Issued by bootcamps, schools, creators &amp; event teams</p>
         <div style={{ display: "flex", justifyContent: "center", gap: 48, flexWrap: "wrap", opacity: 0.55 }}>
-          {["Meridian Academy", "CodeCraft", "NorthLake University", "CreatorHub", "SkillForge"].map((n) => (
+          {["Acme Academy", "Globex University", "Initech Labs", "Umbrella Studio", "Northwind Institute"].map((n) => (
             <span key={n} style={{ fontWeight: 800, fontSize: 19, letterSpacing: "-.02em", color: "var(--ink-2)" }}>{n}</span>
           ))}
         </div>
@@ -137,9 +137,9 @@ export default function Landing() {
         </div>
         <div className="feat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 22 }}>
           {[
-            { icon: "shield" as const, color: "var(--green)", tint: "var(--green-tint)", t: "Tamper-proof records", d: "Every certificate is sealed with a unique ID. Any change breaks the record — so a verified cert is provably authentic." },
-            { icon: "globe" as const, color: "var(--blue)", tint: "var(--blue-tint)", t: "Instant public verification", d: "Each cert gets a shareable verify page and QR code. Anyone can confirm it's real in one tap — no account needed." },
-            { icon: "bolt" as const, color: "#8a6a1e", tint: "var(--gold-tint)", t: "Issue thousands at once", d: "Upload a CSV, map your columns, and bulk-issue personalized certificates in minutes — not days." },
+            { icon: "shield" as const, color: "var(--green)", tint: "var(--green-tint)", t: "Tamper-proof records", d: "Every certificate is sealed with a unique ID. Any change breaks the record, so a verified cert is provably authentic." },
+            { icon: "globe" as const, color: "var(--blue)", tint: "var(--blue-tint)", t: "Instant public verification", d: "Each cert gets a shareable verify page and QR code. Anyone can confirm it's real in one tap, no account needed." },
+            { icon: "bolt" as const, color: "#8a6a1e", tint: "var(--gold-tint)", t: "Issue thousands at once", d: "Upload a CSV, map your columns, and bulk-issue personalized certificates in minutes, not days." },
           ].map((f, i) => (
             <div key={i} className="reveal card" style={{ padding: 28, transitionDelay: i * 0.08 + "s" }}>
               <div style={{ width: 50, height: 50, borderRadius: 13, background: f.tint, color: f.color, display: "grid", placeItems: "center" }}><Icon name={f.icon} size={26} /></div>
@@ -157,7 +157,7 @@ export default function Landing() {
         </div>
         <div className="step-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 22 }}>
           {[
-            { n: "01", t: "Design it", d: "Use the customizer — logo, signatures, seal, colors, fonts, custom fields. Live preview as you go." },
+            { n: "01", t: "Design it", d: "Use the customizer, logo, signatures, seal, colors, fonts, custom fields. Live preview as you go." },
             { n: "02", t: "Issue it", d: "Send one or upload a CSV to issue thousands. Each recipient gets a unique ID and QR." },
             { n: "03", t: "Prove it", d: "Recipients share their verify link. One scan shows a Verified ✓ by Provenly badge." },
           ].map((s, i) => (

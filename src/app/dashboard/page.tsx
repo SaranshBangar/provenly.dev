@@ -38,7 +38,7 @@ export default async function DashboardPage() {
   const rows: CertRow[] = certs.map((c) => ({
     id: c.id,
     recipientName: c.recipientName,
-    eventName: c.eventName || "—",
+    eventName: c.eventName || "-",
     date: fmtDate(c.issueDate),
     status: c.status,
     views: c.views,

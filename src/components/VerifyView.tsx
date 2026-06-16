@@ -139,7 +139,7 @@ export function VerifyView({
                 <div style={{ width: 60, height: 60, background: "#fff", border: "1px solid var(--line)", borderRadius: 10, padding: 5, flex: "0 0 auto" }}><QRCode value={url} size="100%" /></div>
                 <div>
                   <div style={{ fontSize: 13.5, fontWeight: 700 }}>Share this proof</div>
-                  <p className="muted" style={{ fontSize: 12.5, marginTop: 2 }}>Anyone can scan to verify — no account needed.</p>
+                  <p className="muted" style={{ fontSize: 12.5, marginTop: 2 }}>Anyone can scan to verify, no account needed.</p>
                 </div>
               </div>
               <CopyButton text={url} className="btn btn-ghost btn-sm" block style={{ marginTop: 12 }} />

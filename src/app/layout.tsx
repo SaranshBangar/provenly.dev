@@ -2,10 +2,20 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Provenly — Verifiable Certificates",
+  title: "Provenly, Verifiable Certificates",
   description:
-    "Design beautiful certificates, issue them in bulk, and give every recipient a public verification page. One scan proves it's real — forever.",
+    "Design beautiful certificates, issue them in bulk, and give every recipient a public verification page. One scan proves it's real, forever.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://provenly.dev"),
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
+  openGraph: {
+    images: ["/provenly-social.png"],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

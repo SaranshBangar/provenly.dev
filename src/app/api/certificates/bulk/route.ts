@@ -32,7 +32,7 @@ export async function POST(req: Request) {
   const n = rows.length;
 
   const ok = await deductCredits(company.id, n);
-  if (!ok) return NextResponse.json({ error: `Not enough credits — you need ${n}.` }, { status: 402 });
+  if (!ok) return NextResponse.json({ error: `Not enough credits, you need ${n}.` }, { status: 402 });
 
   const now = new Date();
   const get = (r: Row, field: string) => (mapping[field] ? (r[mapping[field]] || "").trim() : "");

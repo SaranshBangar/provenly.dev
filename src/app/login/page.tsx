@@ -115,7 +115,7 @@ export default function AuthPage() {
           </div>
 
           <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 15 }}>
-            {signup && <FieldIcon icon="user" label="Organization name" placeholder="Meridian Academy" value={name} onChange={setName} />}
+            {signup && <FieldIcon icon="user" label="Organization name" placeholder="Acme Academy" value={name} onChange={setName} />}
             <FieldIcon icon="mail" label="Work email" placeholder="you@academy.edu" type="email" value={email} onChange={setEmail} />
             <FieldIcon icon="lock" label="Password" placeholder="••••••••" type="password" pw value={password} onChange={setPassword} />
             {error && (
