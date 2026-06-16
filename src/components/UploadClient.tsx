@@ -54,7 +54,7 @@ function Stepper({ step }: { step: number }) {
             <div style={{ width: 30, height: 30, borderRadius: 99, display: "grid", placeItems: "center", fontWeight: 700, fontSize: 13.5, transition: "all .3s", background: i < step ? "var(--green)" : i === step ? "var(--ink)" : "var(--canvas-2)", color: i <= step ? "#fff" : "var(--ink-4)" }}>
               {i < step ? <Icon name="check" size={16} /> : i + 1}
             </div>
-            <span style={{ fontSize: 14, fontWeight: 600, color: i <= step ? "var(--ink)" : "var(--ink-4)" }}>{s}</span>
+            <span className="step-label" style={{ fontSize: 14, fontWeight: 600, color: i <= step ? "var(--ink)" : "var(--ink-4)" }}>{s}</span>
           </div>
           {i < 2 && <div style={{ flex: 1, height: 2, margin: "0 14px", background: i < step ? "var(--green)" : "var(--line-2)", transition: "background .3s" }} />}
         </div>
@@ -206,7 +206,7 @@ export function UploadClient({ credits, initials }: { credits: number; initials:
               <p className="muted" style={{ fontSize: 14, marginBottom: 18 }}>Match each Provenly field to a column from your file. Unmapped columns are added as custom fields.</p>
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {MAP_FIELDS.map((f) => (
-                  <div key={f.key} style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 12 }}>
+                  <div key={f.key} className="map-field-row" style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 12 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 13px", borderRadius: 10, background: "var(--canvas)", border: "1px solid var(--line)" }}>
                       <Icon name={f.icon} size={17} style={{ color: "var(--green-700)" }} />
                       <span style={{ fontSize: 14, fontWeight: 600 }}>{f.label}</span>

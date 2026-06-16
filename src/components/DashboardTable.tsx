@@ -73,20 +73,20 @@ export function DashboardTable({ certs }: { certs: CertRow[] }) {
 
   return (
     <div className="card" style={{ overflow: "hidden" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 18px", borderBottom: "1px solid var(--line)", flexWrap: "wrap" }}>
+      <div className="dash-toolbar" style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 18px", borderBottom: "1px solid var(--line)", flexWrap: "wrap" }}>
         <h3 style={{ fontSize: 17, marginRight: "auto" }}>Issued certificates</h3>
-        <div style={{ position: "relative" }}>
+        <div className="dash-search" style={{ position: "relative" }}>
           <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "var(--ink-4)" }}><Icon name="grid" size={15} /></span>
           <input className="input" placeholder="Search name or ID…" value={q} onChange={(e) => setQ(e.target.value)} style={{ height: 38, width: 200, paddingLeft: 32, fontSize: 13.5 }} />
         </div>
-        <div style={{ display: "flex", gap: 4, padding: 3, background: "var(--canvas-2)", borderRadius: 9 }}>
+        <div className="dash-filters" style={{ display: "flex", gap: 4, padding: 3, background: "var(--canvas-2)", borderRadius: 9 }}>
           {([["all", "All"], ["verified", "Verified"], ["draft", "Drafts"], ["revoked", "Revoked"]] as const).map(([k, l]) => (
             <button key={k} onClick={() => setFilter(k)} style={{ padding: "6px 12px", borderRadius: 7, fontSize: 13, fontWeight: 600, color: filter === k ? "var(--ink)" : "var(--ink-3)", background: filter === k ? "#fff" : "transparent", boxShadow: filter === k ? "var(--sh-1)" : "none" }}>{l}</button>
           ))}
         </div>
       </div>
 
-      <div className="scroll" style={{ overflowX: "auto" }}>
+      <div className="scroll dash-tablewrap" style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 820 }}>
           <thead>
             <tr style={{ textAlign: "left", color: "var(--ink-3)", fontSize: 12.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em" }}>
@@ -140,6 +140,47 @@ export function DashboardTable({ certs }: { certs: CertRow[] }) {
             })}
           </tbody>
         </table>
+      </div>
+
+      <div className="dash-cardlist" style={{ display: "none" }}>
+        {visible.map((c, i) => {
+          const st = STATUS[c.status];
+          return (
+            <div key={c.id} style={{ borderTop: "1px solid var(--line)", padding: "14px 16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+                <div style={{ width: 38, height: 38, borderRadius: 99, background: avatarColor(start + i), color: "#fff", display: "grid", placeItems: "center", fontWeight: 700, fontSize: 14, flex: "0 0 auto" }}>{initialsOf(c.recipientName)}</div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: 15, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.recipientName}</div>
+                  <div className="muted" style={{ fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.eventName}</div>
+                </div>
+                <span className={st.cls} style={{ flex: "0 0 auto", ...st.style }}><Icon name={st.icon} size={13} /> {st.label}</span>
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "5px 16px", marginTop: 11, fontSize: 12.5, color: "var(--ink-3)" }}>
+                <span className="mono" style={{ color: "var(--ink-2)" }}>{c.id}</span>
+                <span>Issued {c.date}</span>
+                <span>{c.views} views</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 18, marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--line)" }}>
+                <Link href={`/verify/${c.id}`} target="_blank" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13.5, fontWeight: 600, color: "var(--blue)" }}>
+                  <Icon name="link" size={15} /> Open verify page
+                </Link>
+                <div style={{ marginLeft: "auto" }}>
+                  {c.status === "draft" ? (
+                    <span className="muted" style={{ fontSize: 13 }}>—</span>
+                  ) : c.status === "revoked" ? (
+                    <button onClick={() => toggle(c)} disabled={busy === c.id} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13.5, fontWeight: 600, color: "var(--green-700)", opacity: busy === c.id ? 0.5 : 1 }}>
+                      <Icon name="check" size={15} /> Restore
+                    </button>
+                  ) : (
+                    <button onClick={() => toggle(c)} disabled={busy === c.id} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13.5, fontWeight: 600, color: "var(--danger)", opacity: busy === c.id ? 0.5 : 1 }}>
+                      <Icon name="x" size={15} /> Revoke
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {total === 0 ? (
