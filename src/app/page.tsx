@@ -112,7 +112,7 @@ export default function Landing() {
     <div ref={revRef} style={{ background: "var(--canvas)", overflow: "hidden" }}>
       <LandingNav />
 
-      <section style={{ position: "relative", paddingTop: 150, paddingBottom: 90 }}>
+      <section className="land-hero" style={{ position: "relative", paddingTop: 150, paddingBottom: 90 }}>
         <div
           style={{
             position: "absolute",
@@ -205,7 +205,7 @@ export default function Landing() {
             </div>
           </div>
 
-          <div style={{ position: "relative", height: 460, animation: "fade-up .7s .15s both" }}>
+          <div className="hero-visual" style={{ position: "relative", height: 460, animation: "fade-up .7s .15s both" }}>
             <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
               <div style={{ position: "relative" }}>
                 <div style={{ animation: "sealdrop 1s .3s cubic-bezier(.2,.8,.3,1.1) both" }}>
@@ -333,7 +333,7 @@ export default function Landing() {
 
       <section className="container" style={{ paddingBottom: 100 }}>
         <div
-          className="reveal"
+          className="reveal land-cta"
           style={{
             position: "relative",
             overflow: "hidden",

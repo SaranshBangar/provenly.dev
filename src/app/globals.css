@@ -220,8 +220,34 @@ p { margin: 0; }
   .land-nav { display: none !important; }
 }
 
+/* dashboard table -> stacked cards on small screens */
+@media (max-width: 760px) {
+  .dash-tablewrap { display: none; }
+  .dash-cardlist { display: block !important; }
+  .dash-toolbar { align-items: stretch; }
+  .dash-toolbar h3 { width: 100%; margin-right: 0; }
+  .dash-search { width: 100%; }
+  .dash-search .input { width: 100% !important; }
+  .dash-filters { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .dash-filters button { flex: 1 0 auto; white-space: nowrap; }
+}
+
 @media (max-width: 560px) {
   .container { padding: 0 18px; }
   .dash-top { grid-template-columns: 1fr !important; }
   .map-grid > div:last-child { display: none; }
+  /* tighten oversized section paddings on phones */
+  .land-hero { padding-top: 116px !important; padding-bottom: 56px !important; }
+  .land-cta { padding: 44px 22px !important; }
+  .step-grid > div { padding: 26px 22px !important; }
+  /* let mapping rows breathe on phones */
+  .map-field-row { grid-template-columns: 1fr !important; }
+  .map-field-row > svg { display: none !important; }
+  /* keep the upload stepper from overflowing */
+  .step-label { display: none !important; }
+}
+
+/* shrink the floating hero illustration so it never overflows on phones */
+@media (max-width: 600px) {
+  .hero-visual { height: 320px !important; transform: scale(.82); }
 }
