@@ -1,14 +1,15 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, asc } from "drizzle-orm";
 import { getDb } from "@/db";
-import { certificate } from "@/db/schema";
-import { getSessionAndCompany } from "@/lib/session";
+import { certificate, event } from "@/db/schema";
+import { getSessionContext } from "@/lib/session";
 import { fmtDate } from "@/lib/cert";
 import { initialsOf } from "@/lib/util";
 import { AppNav } from "@/components/AppNav";
 import { Icon, type IconName } from "@/components/Icon";
 import { DashboardTable, type CertRow } from "@/components/DashboardTable";
+import { OrgSwitcher } from "@/components/OrgSwitcher";
 
 export const dynamic = "force-dynamic";
 
@@ -25,20 +26,21 @@ function Stat({ icon, tint, color, value, label }: { icon: IconName; tint: strin
 }
 
 export default async function DashboardPage() {
-  const { user, company } = await getSessionAndCompany();
-  if (!user || !company) redirect("/login");
+  const ctx = await getSessionContext();
+  if (!ctx) redirect("/login");
+  const { wallet, org, orgs } = ctx;
 
   const db = getDb();
-  const certs = await db
-    .select()
-    .from(certificate)
-    .where(eq(certificate.companyId, company.id))
-    .orderBy(desc(certificate.createdAt));
+  const [certs, events] = await Promise.all([
+    db.select().from(certificate).where(eq(certificate.companyId, org.id)).orderBy(desc(certificate.createdAt)),
+    db.select({ id: event.id, name: event.name }).from(event).where(eq(event.companyId, org.id)).orderBy(asc(event.name)),
+  ]);
 
   const rows: CertRow[] = certs.map((c) => ({
     id: c.id,
     recipientName: c.recipientName,
     eventName: c.eventName || "-",
+    eventId: c.eventId,
     date: fmtDate(c.issueDate),
     status: c.status,
     views: c.views,
@@ -46,17 +48,20 @@ export default async function DashboardPage() {
 
   const issued = certs.filter((c) => c.status !== "draft").length;
   const totalViews = certs.reduce((a, c) => a + c.views, 0);
-  const isFree = company.plan === "free";
-  const freeUsed = Math.max(0, 5 - company.credits);
-  const pct = isFree ? (company.credits / 5) * 100 : 100;
+  const isFree = wallet.plan === "free";
+  const freeUsed = Math.max(0, 5 - wallet.credits);
+  const pct = isFree ? (wallet.credits / 5) * 100 : 100;
 
   return (
     <>
-      <AppNav credits={company.credits} initials={initialsOf(company.name)} />
+      <AppNav credits={wallet.credits} initials={initialsOf(org.name)} />
       <div style={{ maxWidth: 1320, margin: "0 auto", padding: "32px 22px 70px" }}>
+        <div style={{ marginBottom: 18 }}>
+          <OrgSwitcher orgs={orgs} currentId={org.id} />
+        </div>
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 16, marginBottom: 26 }}>
           <div>
-            <h1 style={{ fontSize: 30, letterSpacing: "-0.03em" }}>Welcome back, {company.name}</h1>
+            <h1 style={{ fontSize: 30, letterSpacing: "-0.03em" }}>Welcome back, {org.name}</h1>
             <p className="muted" style={{ marginTop: 6, fontSize: 15.5 }}>Here&apos;s what&apos;s happening with your certificates.</p>
           </div>
           <div style={{ display: "flex", gap: 10 }}>
@@ -79,7 +84,7 @@ export default async function DashboardPage() {
               <Link className="tlink" href="/billing" style={{ color: "#7fe3bc", fontSize: 13 }}>{isFree ? "Upgrade" : "Top up"}</Link>
             </div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 14 }}>
-              <span style={{ fontSize: 28, fontWeight: 800 }}>{company.credits}</span>
+              <span style={{ fontSize: 28, fontWeight: 800 }}>{wallet.credits}</span>
               <span style={{ color: "rgba(255,255,255,.6)", fontSize: 14 }}>{isFree ? `/ 5 free credits left` : "credits remaining"}</span>
             </div>
             <div style={{ height: 8, borderRadius: 99, background: "rgba(255,255,255,.16)", marginTop: 12, overflow: "hidden" }}>
@@ -91,7 +96,7 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <DashboardTable certs={rows} />
+        <DashboardTable certs={rows} events={events} />
       </div>
     </>
   );

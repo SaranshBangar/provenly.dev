@@ -47,25 +47,35 @@ export function getAuth() {
     databaseHooks: {
       user: {
         create: {
-          // Every account owns exactly one company. Seed it with 5 free credits.
+          // Seed a shared credit wallet (5 free credits) and a default org.
           after: async (newUser) => {
             try {
               const cdb = getDb();
-              const existing = await cdb.query.company.findFirst({
-                where: (c, { eq }) => eq(c.userId, newUser.id),
+              const wallet = await cdb.query.wallet.findFirst({
+                where: (w, { eq }) => eq(w.userId, newUser.id),
               });
-              if (!existing) {
-                await cdb.insert(schema.company).values({
+              if (!wallet) {
+                await cdb.insert(schema.wallet).values({
                   id: crypto.randomUUID(),
                   userId: newUser.id,
-                  name: newUser.name || "My Organization",
                   plan: "free",
                   credits: 5,
                   createdAt: new Date(),
                 });
               }
+              const org = await cdb.query.company.findFirst({
+                where: (c, { eq }) => eq(c.userId, newUser.id),
+              });
+              if (!org) {
+                await cdb.insert(schema.company).values({
+                  id: crypto.randomUUID(),
+                  userId: newUser.id,
+                  name: newUser.name || "My Organization",
+                  createdAt: new Date(),
+                });
+              }
             } catch (e) {
-              console.error("company seed failed", e);
+              console.error("account seed failed", e);
             }
           },
         },

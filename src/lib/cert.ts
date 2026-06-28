@@ -29,10 +29,32 @@ export function verifyDisplay(serial: string, base?: string): string {
   return verifyUrl(serial, base).replace(/^https?:\/\//, "");
 }
 
+// Which event / template the in-progress draft is linked to. Kept separate from
+// CertData (which is the visual payload) and persisted client-side only.
+export type CertMeta = { eventId: string | null; templateId: string | null };
+const META_KEY = "provenly_cert_meta_v1";
+
+export function getCertMeta(): CertMeta {
+  try {
+    return { eventId: null, templateId: null, ...JSON.parse(localStorage.getItem(META_KEY) || "{}") };
+  } catch {
+    return { eventId: null, templateId: null };
+  }
+}
+
+export function setCertMeta(m: CertMeta) {
+  try {
+    localStorage.setItem(META_KEY, JSON.stringify(m));
+  } catch {
+    /* ignore */
+  }
+}
+
 export const DEFAULT_CERT: CertData = {
   template: "classic",
   orientation: "landscape",
   title: "Certificate of Completion",
+  subtitle: "This is proudly presented to",
   recipientName: "Jane Doe",
   recipientEmail: "",
   eventName: "Full-Stack Web Development Bootcamp",
@@ -58,4 +80,6 @@ export const DEFAULT_CERT: CertData = {
   ],
   serial: "PRV-2026-9X4K-T7QM",
   border: "double",
+  background: "#ffffff",
+  elements: [],
 };

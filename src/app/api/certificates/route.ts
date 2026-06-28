@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { eq, desc } from "drizzle-orm";
 import { getDb } from "@/db";
 import { certificate, type CertData } from "@/db/schema";
-import { getSessionAndCompany } from "@/lib/session";
+import { getSessionContext } from "@/lib/session";
 import { deductCredits, addCredits } from "@/lib/credits";
 import { DEFAULT_CERT, genSerial } from "@/lib/cert";
 
@@ -15,33 +15,38 @@ function sanitize(input: Partial<CertData>): CertData {
     signatures: Array.isArray(input.signatures) ? input.signatures.slice(0, 3) : DEFAULT_CERT.signatures,
     skills: Array.isArray(input.skills) ? input.skills.slice(0, 20) : [],
     customFields: Array.isArray(input.customFields) ? input.customFields.slice(0, 30) : [],
+    elements: Array.isArray(input.elements) ? input.elements.slice(0, 100) : [],
   };
 }
 
 export async function GET() {
-  const { company } = await getSessionAndCompany();
-  if (!company) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const ctx = await getSessionContext();
+  if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const db = getDb();
   const rows = await db
     .select()
     .from(certificate)
-    .where(eq(certificate.companyId, company.id))
+    .where(eq(certificate.companyId, ctx.org.id))
     .orderBy(desc(certificate.createdAt));
   return NextResponse.json({ certificates: rows });
 }
 
 export async function POST(req: Request) {
-  const { company } = await getSessionAndCompany();
-  if (!company) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const ctx = await getSessionContext();
+  if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = (await req.json().catch(() => null)) as { cert?: Partial<CertData> } | null;
+  const body = (await req.json().catch(() => null)) as {
+    cert?: Partial<CertData>;
+    eventId?: string | null;
+    templateId?: string | null;
+  } | null;
   if (!body?.cert) return NextResponse.json({ error: "Missing certificate data" }, { status: 400 });
 
   const cert = sanitize(body.cert);
   if (!cert.recipientName?.trim()) return NextResponse.json({ error: "Recipient name is required" }, { status: 400 });
   if (!cert.title?.trim()) return NextResponse.json({ error: "Certificate title is required" }, { status: 400 });
 
-  const ok = await deductCredits(company.id, 1);
+  const ok = await deductCredits(ctx.wallet.id, 1);
   if (!ok) return NextResponse.json({ error: "You're out of credits. Top up to keep issuing." }, { status: 402 });
 
   const id = genSerial();
@@ -51,7 +56,9 @@ export async function POST(req: Request) {
   try {
     await db.insert(certificate).values({
       id,
-      companyId: company.id,
+      companyId: ctx.org.id,
+      eventId: body.eventId || null,
+      templateId: body.templateId || null,
       recipientName: cert.recipientName.trim(),
       recipientEmail: cert.recipientEmail || null,
       title: cert.title.trim(),
@@ -65,7 +72,7 @@ export async function POST(req: Request) {
     });
   } catch (e) {
     // refund the credit on failure
-    await addCredits(company.id, 1, false).catch(() => {});
+    await addCredits(ctx.wallet.id, 1, false).catch(() => {});
     console.error("cert insert failed", e);
     return NextResponse.json({ error: "Could not save certificate" }, { status: 500 });
   }

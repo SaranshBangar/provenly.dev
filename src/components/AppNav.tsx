@@ -10,6 +10,7 @@ const items: { href: string; label: string; icon: IconName }[] = [
   { href: "/dashboard", label: "Dashboard", icon: "grid" },
   { href: "/customize", label: "Customizer", icon: "sliders" },
   { href: "/upload", label: "Bulk issue", icon: "upload" },
+  { href: "/billing", label: "Billing", icon: "coins" },
 ];
 
 export function AppNav({

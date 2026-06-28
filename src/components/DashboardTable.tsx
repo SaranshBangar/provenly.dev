@@ -9,6 +9,7 @@ export type CertRow = {
   id: string;
   recipientName: string;
   eventName: string;
+  eventId: string | null;
   date: string;
   status: "verified" | "draft" | "revoked";
   views: number;
@@ -22,9 +23,10 @@ const STATUS: Record<CertRow["status"], { label: string; cls: string; icon: Icon
 
 const PAGE_SIZES = [10, 20, 50, 100];
 
-export function DashboardTable({ certs }: { certs: CertRow[] }) {
+export function DashboardTable({ certs, events = [] }: { certs: CertRow[]; events?: { id: string; name: string }[] }) {
   const router = useRouter();
   const [filter, setFilter] = useState<"all" | CertRow["status"]>("all");
+  const [eventFilter, setEventFilter] = useState<string>("all");
   const [q, setQ] = useState("");
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
@@ -34,11 +36,12 @@ export function DashboardTable({ certs }: { certs: CertRow[] }) {
   const filtered = certs.filter(
     (c) =>
       (filter === "all" || c.status === filter) &&
+      (eventFilter === "all" || c.eventId === eventFilter) &&
       (c.recipientName.toLowerCase().includes(q.toLowerCase()) || c.id.toLowerCase().includes(q.toLowerCase())),
   );
 
   // Any change to the result set or page size sends us back to page 1.
-  useEffect(() => setPage(1), [filter, q, pageSize]);
+  useEffect(() => setPage(1), [filter, eventFilter, q, pageSize]);
 
   const total = filtered.length;
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
@@ -75,6 +78,18 @@ export function DashboardTable({ certs }: { certs: CertRow[] }) {
     <div className="card" style={{ overflow: "hidden" }}>
       <div className="dash-toolbar" style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 18px", borderBottom: "1px solid var(--line)", flexWrap: "wrap" }}>
         <h3 style={{ fontSize: 17, marginRight: "auto" }}>Issued certificates</h3>
+        <select
+          className="select"
+          value={eventFilter}
+          onChange={(e) => setEventFilter(e.target.value)}
+          title="Filter by event"
+          style={{ height: 38, width: "auto", padding: "0 30px 0 12px", fontSize: 13.5, fontWeight: 600 }}
+        >
+          <option value="all">All events</option>
+          {events.map((ev) => (
+            <option key={ev.id} value={ev.id}>{ev.name}</option>
+          ))}
+        </select>
         <div className="dash-search" style={{ position: "relative" }}>
           <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "var(--ink-4)" }}><Icon name="grid" size={15} /></span>
           <input className="input" placeholder="Search name or ID…" value={q} onChange={(e) => setQ(e.target.value)} style={{ height: 38, width: 200, paddingLeft: 32, fontSize: 13.5 }} />

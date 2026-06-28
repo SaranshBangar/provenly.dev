@@ -7,11 +7,13 @@ import { ImageUpload } from "./ImageUpload";
 import { CertificateFrame, PresetSeal } from "./CertificateFrame";
 import { QRCode } from "./QRCode";
 import { useCertDraft } from "@/lib/use-cert-draft";
-import { genSerial, verifyUrl, verifyDisplay } from "@/lib/cert";
-import type { CertData } from "@/db/schema";
+import { genSerial, verifyUrl, verifyDisplay, getCertMeta, setCertMeta } from "@/lib/cert";
+import { CertElementsLayer } from "./CertElementsLayer";
+import type { CertData, CertElement } from "@/db/schema";
 
 const BRAND_SWATCHES = ["#0E9F6E", "#2E6FE6", "#7C3AED", "#C79A3A", "#D4543B", "#0F1B2D", "#0891B2", "#DB2777"];
-const FONT_OPTS: [string, string][] = [["Source Serif 4", "Serif · classic"], ["Hanken Grotesk", "Sans · modern"]];
+const FONT_OPTS: [string, string][] = [["Source Serif 4", "Serif"], ["Hanken Grotesk", "Sans"], ["Georgia, serif", "Georgia"], ["Arial, sans-serif", "Arial"]];
+const BG_SWATCHES = ["#ffffff", "#FBFAF7", "#F4F7F5", "#0F1B2D", "#1d2f48", "#FDF6E3"];
 const SEAL_OPTS: [string, string][] = [["verified", "Verified"], ["excellence", "Excellence"], ["official", "Official"], ["gold", "Award"]];
 const TITLE_PRESETS = ["Certificate of Completion", "Certificate of Achievement", "Certificate of Participation", "Certificate of Excellence"];
 
@@ -84,14 +86,73 @@ function TagEditor({ tags, onChange }: { tags: string[]; onChange: (v: string[])
   );
 }
 
-export function CustomizerClient({ credits, initials }: { credits: number; initials: string }) {
+type PickEvent = { id: string; name: string };
+type PickTemplate = { id: string; name: string; type: string; data: CertData };
+
+export function CustomizerClient({
+  credits,
+  initials,
+  events = [],
+  templates = [],
+}: {
+  credits: number;
+  initials: string;
+  orgName?: string;
+  events?: PickEvent[];
+  templates?: PickTemplate[];
+}) {
   const router = useRouter();
-  const { cert, update } = useCertDraft();
+  const { cert, update, setCert } = useCertDraft();
   const [open, setOpen] = useState("template");
   const [zoom, setZoom] = useState(1);
   const [flash, setFlash] = useState(false);
   const [origin, setOrigin] = useState("");
+  const [selEl, setSelEl] = useState<string | null>(null);
+  const [meta, setMeta] = useState<{ eventId: string | null; templateId: string | null }>({ eventId: null, templateId: null });
   const toggle = (k: string) => setOpen((o) => (o === k ? "" : k));
+
+  useEffect(() => setMeta(getCertMeta()), []);
+  const updateMeta = (m: { eventId: string | null; templateId: string | null }) => { setMeta(m); setCertMeta(m); };
+
+  // ---- Free-form ("Figma-lite") elements ----
+  const maxZ = () => cert.elements.reduce((m, e) => Math.max(m, e.z), 0);
+  const addEl = (e: Partial<CertElement>) => {
+    const id = crypto.randomUUID();
+    const base: CertElement = { id, type: "text", x: 34, y: 42, w: 32, h: 12, rot: 0, z: maxZ() + 1, text: "New text", color: "#0F1B2D", fontSize: 22, fontWeight: 700, align: "center", opacity: 1 };
+    update((c) => ({ elements: [...c.elements, { ...base, ...e, id }] }));
+    setSelEl(id);
+    setOpen("elements");
+  };
+  const patchEl = (id: string, p: Partial<CertElement>) => update((c) => ({ elements: c.elements.map((x) => (x.id === id ? { ...x, ...p } : x)) }));
+  const removeEl = (id: string) => { update((c) => ({ elements: c.elements.filter((x) => x.id !== id) })); setSelEl(null); };
+  const reorderEl = (id: string, dir: 1 | -1) => patchEl(id, { z: (cert.elements.find((x) => x.id === id)?.z || 0) + dir });
+  const selected = cert.elements.find((e) => e.id === selEl) || null;
+
+  // ---- Events & templates ----
+  const createEvent = async () => {
+    const name = window.prompt("New event name");
+    if (!name?.trim()) return;
+    try {
+      const res = await fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name.trim() }) });
+      const j = (await res.json().catch(() => ({}))) as { id?: string; error?: string };
+      if (!res.ok) throw new Error(j?.error);
+      updateMeta({ ...meta, eventId: j.id || null });
+      update({ eventName: name.trim() });
+      router.refresh();
+    } catch (e) { alert(e instanceof Error && e.message ? e.message : "Could not create event."); }
+  };
+  const loadTemplate = (t: PickTemplate) => { setCert({ ...t.data, serial: cert.serial }); updateMeta({ ...meta, templateId: t.id }); };
+  const saveTemplate = async () => {
+    const name = window.prompt("Template name (e.g. Winner, Participation)");
+    if (!name?.trim()) return;
+    const type = window.prompt("Type label", "participation") || "participation";
+    try {
+      const res = await fetch("/api/templates", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name.trim(), type, cert }) });
+      if (!res.ok) throw new Error();
+      router.refresh();
+      alert("Template saved to this organization.");
+    } catch { alert("Could not save template."); }
+  };
 
   useEffect(() => setOrigin(window.location.origin), []);
   useEffect(() => {
@@ -248,6 +309,111 @@ export function CustomizerClient({ credits, initials }: { credits: number; initi
             </div>
           </Section>
 
+          <Section icon="cal" title="Event & template" sub="Group certs and reuse designs" open={open === "evt"} onToggle={() => toggle("evt")}>
+            <div className="field"><label>Event</label>
+              <div style={{ display: "flex", gap: 8 }}>
+                <select className="select" value={meta.eventId || ""} onChange={(e) => { const ev = events.find((x) => x.id === e.target.value); updateMeta({ ...meta, eventId: e.target.value || null }); if (ev) update({ eventName: ev.name }); }} style={{ height: 44, flex: 1 }}>
+                  <option value="">No event</option>
+                  {events.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}
+                </select>
+                <button onClick={createEvent} className="btn btn-ghost" style={{ flex: "0 0 auto", height: 44 }}><Icon name="plus" size={16} /> New</button>
+              </div>
+              <p className="muted" style={{ fontSize: 12 }}>Certificates are filterable by event on your dashboard.</p>
+            </div>
+            <div className="field"><label>Saved templates</label>
+              {templates.length === 0 ? (
+                <p className="muted" style={{ fontSize: 13 }}>No templates yet. Design a certificate, then save it as a reusable type.</p>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                  {templates.map((t) => (
+                    <button key={t.id} onClick={() => loadTemplate(t)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${meta.templateId === t.id ? "var(--green)" : "var(--line-2)"}`, background: meta.templateId === t.id ? "var(--green-tint)" : "#fff", textAlign: "left" }}>
+                      <span style={{ flex: 1 }}><span style={{ fontWeight: 700, fontSize: 14 }}>{t.name}</span> <span className="muted" style={{ fontSize: 12 }}>· {t.type}</span></span>
+                      <span className="tlink" style={{ fontSize: 12.5, color: "var(--green-700)" }}>Use</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <button onClick={saveTemplate} className="btn btn-ghost btn-sm" style={{ alignSelf: "flex-start", marginTop: 8 }}><Icon name="copy" size={15} /> Save current design as template</button>
+            </div>
+          </Section>
+
+          <Section icon="palette" title="Design extras" sub="Subtitle, background, typeface" open={open === "extras"} onToggle={() => toggle("extras")}>
+            <div className="field"><label>Subtitle line</label>
+              <TF value={cert.subtitle} onChange={(v) => update({ subtitle: v })} placeholder="e.g. This is proudly presented to" />
+            </div>
+            <div className="field"><label>Background</label>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {BG_SWATCHES.map((c) => (
+                  <button key={c} onClick={() => update({ background: c })} title={c} style={{ width: 34, height: 34, borderRadius: 8, background: c, border: `2px solid ${cert.background === c ? "var(--green)" : "var(--line-2)"}` }} />
+                ))}
+                <input type="color" value={cert.background || "#ffffff"} onChange={(e) => update({ background: e.target.value })} style={{ width: 34, height: 34, borderRadius: 8, border: "1px solid var(--line-2)", background: "#fff", padding: 2 }} />
+              </div>
+            </div>
+            <div className="field"><label>Typeface</label>
+              <Seg options={FONT_OPTS.map(([v, l]) => [v, l] as [string, string])} value={cert.font} onChange={(v) => update({ font: v })} />
+            </div>
+            <div className="field"><label>Border style</label>
+              <Seg options={[["none", "None"], ["solid", "Solid"], ["dashed", "Dashed"], ["double", "Double"], ["ornate", "Ornate"]]} value={cert.border} onChange={(v) => update({ border: v })} />
+            </div>
+          </Section>
+
+          <Section icon="image" title="Elements" sub="Drag-and-drop logos, text & shapes" open={open === "elements"} onToggle={() => toggle("elements")} badge="new">
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <button onClick={() => addEl({ type: "text", text: "New text" })} className="btn btn-ghost btn-sm"><Icon name="type" size={15} /> Text</button>
+              <button onClick={() => addEl({ type: "shape", shape: "rect", color: "#0E9F6E", w: 24, h: 16, text: "" })} className="btn btn-ghost btn-sm"><Icon name="layout" size={15} /> Box</button>
+              <button onClick={() => addEl({ type: "shape", shape: "ellipse", color: "#2E6FE6", w: 18, h: 18, text: "" })} className="btn btn-ghost btn-sm"><Icon name="qr" size={15} /> Circle</button>
+              <button onClick={() => addEl({ type: "shape", shape: "line", color: "#0F1B2D", w: 30, h: 2, text: "" })} className="btn btn-ghost btn-sm"><Icon name="sliders" size={15} /> Line</button>
+            </div>
+            <div style={{ marginTop: 10 }}>
+              <ImageUpload value={null} label="Add image / logo" hint="Uploads and drops onto the canvas" onChange={(url) => { if (url) addEl({ type: "image", src: url, text: "", w: 22, h: 22, fontSize: undefined }); }} />
+            </div>
+
+            {cert.elements.length > 0 && (
+              <div className="field" style={{ marginTop: 6 }}><label>Layers</label>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {[...cert.elements].sort((a, b) => b.z - a.z).map((el) => (
+                    <div key={el.id} onClick={() => setSelEl(el.id)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 9, border: `1.5px solid ${selEl === el.id ? "var(--green)" : "var(--line-2)"}`, background: selEl === el.id ? "var(--green-tint)" : "#fff", cursor: "pointer" }}>
+                      <Icon name={el.type === "image" ? "image" : el.type === "shape" ? "layout" : "type"} size={15} />
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{el.type === "text" ? el.text || "Text" : el.type === "image" ? "Image" : el.shape}</span>
+                      <button onClick={(e) => { e.stopPropagation(); reorderEl(el.id, 1); }} title="Bring forward" style={{ color: "var(--ink-4)" }}><Icon name="arrow" size={14} style={{ transform: "rotate(-90deg)" }} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); reorderEl(el.id, -1); }} title="Send back" style={{ color: "var(--ink-4)" }}><Icon name="arrow" size={14} style={{ transform: "rotate(90deg)" }} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); removeEl(el.id); }} title="Delete" style={{ color: "var(--ink-4)" }}><Icon name="trash" size={15} /></button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {selected && (
+              <div className="field" style={{ marginTop: 6, padding: 12, borderRadius: 12, background: "var(--canvas)", border: "1px solid var(--line)" }}>
+                <label>Selected element</label>
+                {selected.type === "text" && (
+                  <>
+                    <input className="input" value={selected.text || ""} onChange={(e) => patchEl(selected.id, { text: e.target.value })} placeholder="Text" style={{ height: 40 }} />
+                    <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 8 }}>
+                      <span className="muted" style={{ fontSize: 12.5 }}>Size</span>
+                      <input type="range" min={8} max={72} value={selected.fontSize || 22} onChange={(e) => patchEl(selected.id, { fontSize: Number(e.target.value) })} style={{ flex: 1 }} />
+                    </div>
+                  </>
+                )}
+                <div style={{ display: "flex", gap: 14, alignItems: "center", marginTop: 8 }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, margin: 0 }}>
+                    <span className="muted" style={{ fontSize: 12.5 }}>{selected.type === "text" ? "Color" : "Fill"}</span>
+                    <input type="color" value={selected.color || "#0F1B2D"} onChange={(e) => patchEl(selected.id, { color: e.target.value })} style={{ width: 32, height: 28, border: "1px solid var(--line-2)", borderRadius: 6, padding: 1 }} />
+                  </label>
+                  <div style={{ flex: 1, display: "flex", gap: 8, alignItems: "center" }}>
+                    <span className="muted" style={{ fontSize: 12.5 }}>Opacity</span>
+                    <input type="range" min={0} max={100} value={Math.round((selected.opacity ?? 1) * 100)} onChange={(e) => patchEl(selected.id, { opacity: Number(e.target.value) / 100 })} style={{ flex: 1 }} />
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8 }}>
+                  <span className="muted" style={{ fontSize: 12.5 }}>Rotate</span>
+                  <input type="range" min={-180} max={180} value={selected.rot || 0} onChange={(e) => patchEl(selected.id, { rot: Number(e.target.value) })} style={{ flex: 1 }} />
+                </div>
+              </div>
+            )}
+          </Section>
+
           <div style={{ padding: 20 }}>
             <button onClick={() => router.push("/preview")} className="btn btn-primary btn-block btn-lg">Continue to preview <Icon name="arrow" size={18} /></button>
           </div>
@@ -267,8 +433,9 @@ export function CustomizerClient({ credits, initials }: { credits: number; initi
           </div>
           <div className="scroll" style={{ flex: 1, overflow: "auto", display: "grid", placeItems: "center", padding: 36 }}>
             <div style={{ width: cert.orientation === "landscape" ? `min(${720 * zoom}px, 92%)` : `min(${500 * zoom}px, 72%)`, transition: "width .3s" }}>
-              <div style={{ animation: flash ? "pop-in .3s ease both" : "none", borderRadius: 4 }}>
+              <div style={{ animation: flash ? "pop-in .3s ease both" : "none", borderRadius: 4, position: "relative" }}>
                 <CertificateFrame cert={cert} verifyUrl={url} />
+                <CertElementsLayer elements={cert.elements} selectedId={selEl} onSelect={setSelEl} onChange={(els) => update({ elements: els })} />
               </div>
               <div style={{ textAlign: "center", marginTop: 16, color: "var(--ink-4)", fontSize: 12.5, fontWeight: 600 }}>
                 <Icon name="check" size={14} style={{ color: "var(--green)", verticalAlign: "-2px" }} /> Changes save automatically · {cert.orientation} · {cert.template}

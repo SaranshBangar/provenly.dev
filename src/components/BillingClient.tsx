@@ -216,7 +216,7 @@ export function BillingClient({
               </div>
             </div>
             <div className="card" style={{ padding: 18 }}>
-              {["₹1 = 1 certificate credit", "Credits never expire", "Verification is always free", "One company per account"].map((t) => (
+              {["₹1 = 1 certificate credit", "Credits never expire", "Verification is always free", "Shared across all your organizations"].map((t) => (
                 <div key={t} style={{ display: "flex", alignItems: "center", gap: 9, padding: "7px 0", fontSize: 13.5, fontWeight: 500 }}>
                   <Icon name="check" size={16} style={{ color: "var(--green)" }} /> {t}
                 </div>

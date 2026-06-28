@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { getDb } from "@/db";
 import { certificate } from "@/db/schema";
-import { getSessionAndCompany } from "@/lib/session";
+import { getSessionContext } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -14,12 +14,12 @@ function decodeDataUrl(dataUrl: string): { bytes: Uint8Array; contentType: strin
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { company } = await getSessionAndCompany();
-  if (!company) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const ctx = await getSessionContext();
+  if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
 
   const db = getDb();
-  const row = await db.query.certificate.findFirst({ where: and(eq(certificate.id, id), eq(certificate.companyId, company.id)) });
+  const row = await db.query.certificate.findFirst({ where: and(eq(certificate.id, id), inArray(certificate.companyId, ctx.orgs.map((o) => o.id))) });
   if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = (await req.json().catch(() => null)) as { kind?: "pdf" | "png"; dataUrl?: string } | null;
