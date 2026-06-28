@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { getDb } from "@/db";
 import { payment } from "@/db/schema";
-import { getSessionAndCompany } from "@/lib/session";
+import { getSessionContext } from "@/lib/session";
 import { MIN_TOPUP_INR, isCashfreeConfigured, createCashfreeOrder, cashfreeEnv } from "@/lib/cashfree";
 
 export const dynamic = "force-dynamic";
@@ -14,8 +14,9 @@ function appUrl(req: Request): string {
 }
 
 export async function POST(req: Request) {
-  const { user, company } = await getSessionAndCompany();
-  if (!user || !company) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const ctx = await getSessionContext();
+  if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { user, wallet } = ctx;
 
   const body = (await req.json().catch(() => null)) as { amount?: number } | null;
   const amount = Math.floor(Number(body?.amount));
@@ -29,7 +30,7 @@ export async function POST(req: Request) {
 
   await db.insert(payment).values({
     id,
-    companyId: company.id,
+    walletId: wallet.id,
     cfOrderId: orderId,
     amountInr: amount,
     credits: amount, // ₹1 = 1 credit
@@ -48,7 +49,7 @@ export async function POST(req: Request) {
     const { paymentSessionId } = await createCashfreeOrder({
       orderId,
       amountInr: amount,
-      customerId: company.id,
+      customerId: wallet.id,
       customerEmail: user.email,
       returnUrl: `${base}/billing?order_id={order_id}`,
       notifyUrl: `${base}/api/billing/webhook`,

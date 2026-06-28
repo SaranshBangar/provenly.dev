@@ -8,7 +8,7 @@ import { CertificateFrame } from "./CertificateFrame";
 import { QRCode } from "./QRCode";
 import { CopyButton } from "./CopyButton";
 import { useCertDraft } from "@/lib/use-cert-draft";
-import { fmtDate, verifyUrl, verifyDisplay } from "@/lib/cert";
+import { fmtDate, verifyUrl, verifyDisplay, getCertMeta } from "@/lib/cert";
 import type { CertData } from "@/db/schema";
 
 export function PreviewClient({ credits, initials }: { credits: number; initials: string }) {
@@ -36,10 +36,11 @@ export function PreviewClient({ credits, initials }: { credits: number; initials
     setError("");
     setIssuing(true);
     try {
+      const m = getCertMeta();
       const res = await fetch("/api/certificates", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cert }),
+        body: JSON.stringify({ cert, eventId: m.eventId, templateId: m.templateId }),
       });
       const json = (await res.json()) as { id?: string; error?: string };
       if (!res.ok || !json.id) throw new Error(json.error || "Could not issue certificate");

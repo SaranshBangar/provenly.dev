@@ -37,7 +37,7 @@ export async function settlePayment(orderId: string, paidAmount?: number): Promi
   if ((claim.meta.changes ?? 0) === 0) return { ok: true }; // already claimed elsewhere
 
   try {
-    await addCredits(row.companyId, row.credits, true);
+    await addCredits(row.walletId, row.credits, true);
   } catch (e) {
     // Crediting failed after claiming, release the claim so a retry can settle.
     await db.update(payment).set({ status: "created" }).where(eq(payment.id, row.id));

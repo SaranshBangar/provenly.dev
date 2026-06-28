@@ -57,29 +57,88 @@ export const verification = sqliteTable("verification", {
    Provenly app tables
    ============================================================ */
 
-// One company / org per account.
-export const company = sqliteTable("company", {
+// Shared credit / plan pool — one per user, spanning all their organizations.
+// Named "wallet" to avoid colliding with Better Auth's own `account` table.
+export const wallet = sqliteTable("wallet", {
   id: text("id").primaryKey(),
   userId: text("user_id")
     .notNull()
     .unique()
     .references(() => user.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  logoUrl: text("logo_url"),
   plan: text("plan", { enum: ["free", "pro"] }).notNull().default("free"),
   // Credits: 1 credit = 1 certificate generation. Free signup grants 5.
   credits: integer("credits").notNull().default(5),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 });
 
+// An organization. A user can own many. The table keeps the v1 name "company"
+// so the `company_id` FK used across the app does not have to change.
+export const company = sqliteTable("company", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  logoUrl: text("logo_url"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+});
+
+// An event within an organization (e.g. "Annual Hackathon 2026").
+export const event = sqliteTable("event", {
+  id: text("id").primaryKey(),
+  companyId: text("company_id")
+    .notNull()
+    .references(() => company.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  date: text("date"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+});
+
+// A reusable certificate template / "type" (participation, winner, special...).
+export const template = sqliteTable("template", {
+  id: text("id").primaryKey(),
+  companyId: text("company_id")
+    .notNull()
+    .references(() => company.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  type: text("type").notNull().default("participation"),
+  data: text("data", { mode: "json" }).$type<CertData>().notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+});
+
 export type CertSignature = { name: string; title: string; image: string | null };
 export type CertCustomField = { key: string; value: string };
+
+// A free-form, draggable element layered on top of the template ("Figma-lite").
+// Coordinates/size are percentages of the canvas so they scale at any zoom.
+export type CertElement = {
+  id: string;
+  type: "image" | "text" | "shape";
+  x: number; // % from left (0-100)
+  y: number; // % from top (0-100)
+  w: number; // % width
+  h: number; // % height
+  rot: number; // degrees
+  z: number; // stacking order
+  src?: string; // image element
+  text?: string; // text element
+  color?: string; // text color / shape fill
+  bg?: string; // text background
+  fontSize?: number; // px at base (landscape) scale
+  fontWeight?: number;
+  fontFamily?: string;
+  align?: "left" | "center" | "right";
+  shape?: "rect" | "ellipse" | "line";
+  radius?: number; // shape corner radius / image rounding (px)
+  opacity?: number; // 0-1
+};
 
 // Full render payload stored alongside indexed columns.
 export type CertData = {
   template: string;
   orientation: string;
   title: string;
+  subtitle: string;
   recipientName: string;
   recipientEmail?: string;
   eventName: string;
@@ -98,6 +157,8 @@ export type CertData = {
   customFields: CertCustomField[];
   serial: string;
   border: string;
+  background: string;
+  elements: CertElement[];
 };
 
 export const certificate = sqliteTable("certificate", {
@@ -105,6 +166,8 @@ export const certificate = sqliteTable("certificate", {
   companyId: text("company_id")
     .notNull()
     .references(() => company.id, { onDelete: "cascade" }),
+  eventId: text("event_id"),
+  templateId: text("template_id"),
   recipientName: text("recipient_name").notNull(),
   recipientEmail: text("recipient_email"),
   title: text("title").notNull(),
@@ -123,9 +186,9 @@ export const certificate = sqliteTable("certificate", {
 
 export const payment = sqliteTable("payment", {
   id: text("id").primaryKey(),
-  companyId: text("company_id")
+  walletId: text("wallet_id")
     .notNull()
-    .references(() => company.id, { onDelete: "cascade" }),
+    .references(() => wallet.id, { onDelete: "cascade" }),
   cfOrderId: text("cf_order_id").notNull().unique(),
   amountInr: integer("amount_inr").notNull(),
   credits: integer("credits").notNull(),
@@ -135,6 +198,9 @@ export const payment = sqliteTable("payment", {
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 });
 
+export type Wallet = typeof wallet.$inferSelect;
 export type Company = typeof company.$inferSelect;
+export type EventRow = typeof event.$inferSelect;
+export type TemplateRow = typeof template.$inferSelect;
 export type Certificate = typeof certificate.$inferSelect;
 export type Payment = typeof payment.$inferSelect;

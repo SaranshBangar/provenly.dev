@@ -2,6 +2,61 @@ import type { CSSProperties } from "react";
 import { Seal, type SealGlyph } from "./Seal";
 import { QRCode } from "./QRCode";
 import { fmtDate, SANS, SERIF, type CertData } from "@/lib/cert";
+import type { CertElement } from "@/db/schema";
+
+// Free-form draggable elements, drawn at percentage coordinates so they scale
+// with the frame at any zoom or export size. Text size is expressed in cqw
+// (1% of frame width) relative to a ~700px base so it tracks the frame.
+const EL_BASE_W = 700;
+function ElementsOverlay({ elements }: { elements?: CertElement[] }) {
+  if (!elements || elements.length === 0) return null;
+  return (
+    <>
+      {[...elements].sort((a, b) => a.z - b.z).map((el) => {
+        const box: CSSProperties = {
+          position: "absolute",
+          left: `${el.x}%`,
+          top: `${el.y}%`,
+          width: `${el.w}%`,
+          height: `${el.h}%`,
+          transform: `rotate(${el.rot || 0}deg)`,
+          opacity: el.opacity ?? 1,
+          zIndex: 4 + (el.z || 0),
+          pointerEvents: "none",
+        };
+        if (el.type === "image") {
+          return <img key={el.id} src={el.src} alt="" style={{ ...box, objectFit: "contain", borderRadius: el.radius ? `${el.radius}px` : undefined }} />;
+        }
+        if (el.type === "shape") {
+          const fill = el.color || "#0E9F6E";
+          const radius = el.shape === "ellipse" ? "50%" : el.shape === "line" ? "0" : `${el.radius ?? 4}px`;
+          return <div key={el.id} style={{ ...box, background: fill, borderRadius: radius }} />;
+        }
+        return (
+          <div
+            key={el.id}
+            style={{
+              ...box,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: el.align === "left" ? "flex-start" : el.align === "right" ? "flex-end" : "center",
+              textAlign: el.align || "center",
+              color: el.color || "#0F1B2D",
+              fontWeight: el.fontWeight || 700,
+              fontFamily: el.fontFamily || SANS,
+              fontSize: `${(((el.fontSize || 22) / EL_BASE_W) * 100).toFixed(2)}cqw`,
+              lineHeight: 1.15,
+              overflow: "hidden",
+              wordBreak: "break-word",
+            }}
+          >
+            {el.text}
+          </div>
+        );
+      })}
+    </>
+  );
+}
 
 export const TEMPLATES = [
   { id: "classic", name: "Classic", desc: "Formal serif & seal" },
@@ -174,7 +229,7 @@ function ClassicLayout({ c, accent, isPortrait, verifyUrl, seal }: LayoutProps) 
           <div style={{ fontSize: "6.4cqmin", fontWeight: 700, lineHeight: 1.04 }}>{c.title || "Certificate"}</div>
           <div style={{ width: "16cqmin", height: "0.5cqmin", background: accent, margin: "2.2cqmin auto 0", borderRadius: 99 }} />
         </div>
-        <div style={{ marginTop: "3.2cqmin", fontSize: "2.6cqmin", opacity: 0.65 }}>This certifies that</div>
+        <div style={{ marginTop: "3.2cqmin", fontSize: "2.6cqmin", opacity: 0.65 }}>{c.subtitle || "This certifies that"}</div>
         <div style={{ marginTop: "1.4cqmin", fontSize: "7.6cqmin", fontWeight: 600, fontStyle: "italic", color: accent, lineHeight: 1.05, letterSpacing: "-0.01em", maxWidth: "92%" }}>{c.recipientName || "Recipient Name"}</div>
         <div style={{ marginTop: "2.4cqmin", fontSize: "2.7cqmin", lineHeight: 1.5, maxWidth: isPortrait ? "92%" : "76%", opacity: 0.82, textWrap: "pretty" }}>
           {c.bodyText} {c.eventName && <strong style={{ opacity: 1 }}>{c.eventName}</strong>}.
@@ -198,7 +253,7 @@ function ElegantLayout({ c, accent, isPortrait, verifyUrl, seal }: LayoutProps) 
         <div style={{ marginTop: "1.2cqmin", fontSize: "2.2cqmin", fontWeight: 700, letterSpacing: "0.32em", textTransform: "uppercase", color: gold }}>Certificate</div>
         <div style={{ marginTop: "1.4cqmin", fontSize: "5.6cqmin", fontWeight: 700, lineHeight: 1.05 }}>{c.title || "Certificate"}</div>
         <Flourish color={gold} />
-        <div style={{ marginTop: "2.6cqmin", fontSize: "2.5cqmin", opacity: 0.6, fontStyle: "italic" }}>is proudly presented to</div>
+        <div style={{ marginTop: "2.6cqmin", fontSize: "2.5cqmin", opacity: 0.6, fontStyle: "italic" }}>{c.subtitle || "is proudly presented to"}</div>
         <div style={{ marginTop: "1.4cqmin", fontSize: "8cqmin", fontWeight: 600, fontStyle: "italic", color: "#3a3320", lineHeight: 1.04, maxWidth: "92%" }}>{c.recipientName || "Recipient Name"}</div>
         <div style={{ marginTop: "2.6cqmin", fontSize: "2.6cqmin", lineHeight: 1.55, maxWidth: isPortrait ? "92%" : "74%", opacity: 0.8, textWrap: "pretty" }}>
           {c.bodyText} {c.eventName && <strong style={{ opacity: 1, color: gold }}>{c.eventName}</strong>}.
@@ -229,7 +284,7 @@ function ModernLayout({ c, accent, isPortrait, verifyUrl, seal }: LayoutProps) {
         <div style={{ marginTop: "4cqmin", fontSize: "2.2cqmin", fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: accent }}>Certificate of</div>
         <div style={{ fontSize: "6.4cqmin", fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1, marginTop: "0.6cqmin" }}>{(c.title || "Certificate").replace(/^Certificate of\s*/i, "")}</div>
         <div style={{ width: "10cqmin", height: "0.7cqmin", background: accent, borderRadius: 99, marginTop: "2.4cqmin" }} />
-        <div style={{ marginTop: "3cqmin", fontSize: "2.4cqmin", opacity: 0.55 }}>This certificate is awarded to</div>
+        <div style={{ marginTop: "3cqmin", fontSize: "2.4cqmin", opacity: 0.55 }}>{c.subtitle || "This certificate is awarded to"}</div>
         <div style={{ marginTop: "0.8cqmin", fontSize: "7.2cqmin", fontWeight: 800, letterSpacing: "-0.02em", lineHeight: 1.02 }}>{c.recipientName || "Recipient Name"}</div>
         <div style={{ marginTop: "2.4cqmin", fontSize: "2.6cqmin", lineHeight: 1.5, opacity: 0.78, maxWidth: "92%", textWrap: "pretty" }}>
           {c.bodyText} {c.eventName && <strong style={{ opacity: 1, color: accent }}>{c.eventName}</strong>}.
@@ -253,7 +308,7 @@ function MinimalLayout({ c, accent, isPortrait, verifyUrl, seal }: LayoutProps) 
         <LogoMark c={c} accent={accent} size="5cqmin" />
         <div style={{ marginTop: "auto" }} />
         <div style={{ fontSize: "2.1cqmin", fontWeight: 700, letterSpacing: "0.34em", textTransform: "uppercase", color: accent }}>{c.title || "Certificate"}</div>
-        <div style={{ marginTop: "3cqmin", fontSize: "1.9cqmin", fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", opacity: 0.4 }}>Presented to</div>
+        <div style={{ marginTop: "3cqmin", fontSize: "1.9cqmin", fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", opacity: 0.4 }}>{c.subtitle || "Presented to"}</div>
         <div style={{ marginTop: "2cqmin", fontSize: "9cqmin", fontWeight: 600, letterSpacing: "-0.03em", lineHeight: 1, maxWidth: "94%" }}>{c.recipientName || "Recipient Name"}</div>
         <div style={{ width: "100%", maxWidth: "60cqmin", height: "0.18cqmin", background: "var(--line-2)", margin: "4cqmin 0" }} />
         <div style={{ fontSize: "2.5cqmin", lineHeight: 1.55, maxWidth: isPortrait ? "90%" : "70%", opacity: 0.7, textWrap: "pretty" }}>
@@ -292,7 +347,7 @@ function BoldLayout({ c, accent, isPortrait, verifyUrl, seal }: LayoutProps) {
         </div>
       </div>
       <div style={{ position: "absolute", top: bandH, left: 0, right: 0, bottom: 0, padding: "5cqmin 6cqmin 5cqmin", display: "flex", flexDirection: "column", textAlign: "left" }}>
-        <div style={{ marginTop: "1cqmin", fontSize: "2.4cqmin", fontWeight: 600, opacity: 0.5 }}>Awarded to</div>
+        <div style={{ marginTop: "1cqmin", fontSize: "2.4cqmin", fontWeight: 600, opacity: 0.5 }}>{c.subtitle || "Awarded to"}</div>
         <div style={{ fontSize: "8cqmin", fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1, color: accent, marginTop: "0.6cqmin" }}>{c.recipientName || "Recipient Name"}</div>
         <div style={{ marginTop: "2.2cqmin", fontSize: "2.6cqmin", lineHeight: 1.5, opacity: 0.8, maxWidth: "94%", textWrap: "pretty" }}>
           {c.bodyText} {c.eventName && <strong style={{ opacity: 1, color: accent }}>{c.eventName}</strong>}.
@@ -328,14 +383,16 @@ export function CertificateFrame({ cert, verifyUrl, seal = true }: { cert: CertD
   const borderStyle: Record<string, CSSProperties> = {
     none: {},
     solid: { border: `0.7cqmin solid ${accent}` },
+    dashed: { border: `0.6cqmin dashed ${accent}` },
     double: { border: `0.5cqmin double ${accent}`, boxShadow: `inset 0 0 0 0.5cqmin #fff, inset 0 0 0 0.7cqmin ${accent}` },
     ornate: { border: `0.7cqmin solid ${accent}` },
   };
   const inset = border === "none" ? "0" : border === "double" ? "3cqmin" : "3.2cqmin";
 
   return (
-    <div style={{ position: "relative", width: "100%", aspectRatio: aspect, containerType: "size", background: "#fff", color: "var(--ink)", boxShadow: "var(--sh-3)", overflow: "hidden" }}>
+    <div style={{ position: "relative", width: "100%", aspectRatio: aspect, containerType: "size", background: c.background || "#fff", color: "var(--ink)", boxShadow: "var(--sh-3)", overflow: "hidden" }}>
       <Layout c={c} accent={accent} isPortrait={isPortrait} verifyUrl={url} seal={seal} />
+      <ElementsOverlay elements={c.elements} />
       {border !== "none" && (
         <div style={{ position: "absolute", inset, pointerEvents: "none", ...borderStyle[border] }}>
           {border === "ornate" &&

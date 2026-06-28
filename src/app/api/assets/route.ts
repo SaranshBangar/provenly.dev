@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { getSessionAndCompany } from "@/lib/session";
+import { getSessionContext } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -12,8 +12,8 @@ function extFor(type: string) {
 }
 
 export async function POST(req: Request) {
-  const { company } = await getSessionAndCompany();
-  if (!company) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const ctx = await getSessionContext();
+  if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const form = await req.formData();
   const file = form.get("file");
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   if (file.size > MAX_BYTES) return NextResponse.json({ error: "File too large (max 5MB)" }, { status: 413 });
 
   const { env } = getCloudflareContext();
-  const key = `assets/${company.id}/${crypto.randomUUID()}.${extFor(file.type)}`;
+  const key = `assets/${ctx.org.id}/${crypto.randomUUID()}.${extFor(file.type)}`;
   await env.BUCKET.put(key, await file.arrayBuffer(), {
     httpMetadata: { contentType: file.type },
   });

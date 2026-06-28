@@ -63,10 +63,11 @@ function Stepper({ step }: { step: number }) {
   );
 }
 
-export function UploadClient({ credits, initials }: { credits: number; initials: string }) {
+export function UploadClient({ credits, initials, events = [] }: { credits: number; initials: string; orgName?: string; events?: { id: string; name: string }[] }) {
   const router = useRouter();
   const { cert } = useCertDraft();
   const [step, setStep] = useState(0);
+  const [eventId, setEventId] = useState("");
   const [dragging, setDragging] = useState(false);
   const [parsing, setParsing] = useState(false);
   const [columns, setColumns] = useState<string[]>([]);
@@ -143,7 +144,7 @@ export function UploadClient({ credits, initials }: { credits: number; initials:
       const res = await fetch("/api/certificates/bulk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ template: cert, mapping, customColumns: customCols, rows }),
+        body: JSON.stringify({ template: cert, mapping, customColumns: customCols, rows, eventId: eventId || null, eventName: events.find((e) => e.id === eventId)?.name }),
       });
       const json = (await res.json()) as { issued?: number; error?: string };
       if (!res.ok) throw new Error(json.error || "Bulk issue failed");
@@ -164,6 +165,13 @@ export function UploadClient({ credits, initials }: { credits: number; initials:
           <button onClick={() => router.push("/dashboard")} style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--ink-3)", fontSize: 14, fontWeight: 600, marginBottom: 12 }}><Icon name="arrowL" size={16} /> Dashboard</button>
           <h1 style={{ fontSize: 28, letterSpacing: "-0.03em" }}>Bulk issue certificates</h1>
           <p className="muted" style={{ marginTop: 6, fontSize: 15.5 }}>Upload a CSV of recipients, map the columns, and issue them all at once. The current customizer design is used as the template.</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14 }}>
+            <span style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink-3)" }}>Assign to event</span>
+            <select className="select" value={eventId} onChange={(e) => setEventId(e.target.value)} style={{ height: 38, width: "auto", padding: "0 30px 0 12px", fontSize: 13.5, fontWeight: 600 }}>
+              <option value="">No event</option>
+              {events.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}
+            </select>
+          </div>
         </div>
 
         <Stepper step={done ? 3 : step} />

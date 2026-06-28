@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSessionAndCompany } from "@/lib/session";
+import { getSessionContext } from "@/lib/session";
 import { settlePayment } from "@/lib/billing";
 import { isCashfreeConfigured } from "@/lib/cashfree";
 
@@ -13,8 +13,8 @@ export async function GET(req: Request) {
   if (isCashfreeConfigured()) {
     return NextResponse.json({ error: "Mock disabled when Cashfree is configured" }, { status: 403 });
   }
-  const { company } = await getSessionAndCompany();
-  if (!company) return NextResponse.redirect(new URL("/login", req.url));
+  const ctx = await getSessionContext();
+  if (!ctx) return NextResponse.redirect(new URL("/login", req.url));
 
   const orderId = new URL(req.url).searchParams.get("order_id");
   if (!orderId) return NextResponse.redirect(new URL("/billing?error=1", req.url));

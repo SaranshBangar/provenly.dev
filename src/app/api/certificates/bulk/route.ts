@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/db";
 import { certificate, type CertData } from "@/db/schema";
-import { getSessionAndCompany } from "@/lib/session";
+import { getSessionContext } from "@/lib/session";
 import { deductCredits, addCredits } from "@/lib/credits";
 import { DEFAULT_CERT, genSerial } from "@/lib/cert";
 
@@ -11,14 +11,17 @@ const MAX_ROWS = 10000;
 type Row = Record<string, string>;
 
 export async function POST(req: Request) {
-  const { company } = await getSessionAndCompany();
-  if (!company) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const ctx = await getSessionContext();
+  if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = (await req.json().catch(() => null)) as {
     template?: Partial<CertData>;
     mapping?: Record<string, string>;
     customColumns?: string[];
     rows?: Row[];
+    eventId?: string | null;
+    templateId?: string | null;
+    eventName?: string;
   } | null;
 
   const rows = body?.rows;
@@ -31,7 +34,7 @@ export async function POST(req: Request) {
   const template: CertData = { ...DEFAULT_CERT, ...(body?.template || {}) };
   const n = rows.length;
 
-  const ok = await deductCredits(company.id, n);
+  const ok = await deductCredits(ctx.wallet.id, n);
   if (!ok) return NextResponse.json({ error: `Not enough credits, you need ${n}.` }, { status: 402 });
 
   const now = new Date();
@@ -40,7 +43,7 @@ export async function POST(req: Request) {
   const values = rows.map((r) => {
     const id = genSerial();
     const recipientName = get(r, "recipientName") || "Recipient";
-    const eventName = get(r, "eventName") || template.eventName;
+    const eventName = get(r, "eventName") || body?.eventName || template.eventName;
     const grade = get(r, "grade") || template.grade;
     const email = get(r, "email") || null;
     const customFields = [
@@ -50,7 +53,9 @@ export async function POST(req: Request) {
     const data: CertData = { ...template, serial: id, recipientName, eventName, grade, recipientEmail: email || "", customFields };
     return {
       id,
-      companyId: company.id,
+      companyId: ctx.org.id,
+      eventId: body?.eventId || null,
+      templateId: body?.templateId || null,
       recipientName,
       recipientEmail: email,
       title: template.title,
@@ -72,7 +77,7 @@ export async function POST(req: Request) {
       await db.insert(certificate).values(values.slice(i, i + CHUNK));
     }
   } catch (e) {
-    await addCredits(company.id, n, false).catch(() => {});
+    await addCredits(ctx.wallet.id, n, false).catch(() => {});
     console.error("bulk insert failed", e);
     return NextResponse.json({ error: "Could not issue certificates" }, { status: 500 });
   }
