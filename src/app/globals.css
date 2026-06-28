@@ -210,7 +210,7 @@ p { margin: 0; }
   .hero-grid > div:last-child { height: 380px !important; order: -1; }
   .feat-grid, .step-grid { grid-template-columns: 1fr !important; }
   .dash-top { grid-template-columns: 1fr 1fr !important; }
-  .map-grid, .prev-grid, .verify-grid { grid-template-columns: 1fr !important; }
+  .map-grid, .prev-grid, .verify-grid, .hub-grid { grid-template-columns: 1fr !important; }
   .prev-grid > div:last-child, .verify-grid > div:last-child { position: static !important; }
   .auth-grid { grid-template-columns: 1fr !important; }
   .auth-brand { display: none !important; }

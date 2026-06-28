@@ -1,29 +1,16 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { eq, desc, asc } from "drizzle-orm";
+import { eq, asc, desc } from "drizzle-orm";
 import { getDb } from "@/db";
-import { certificate, event } from "@/db/schema";
+import { certificate, event, template } from "@/db/schema";
 import { getSessionContext } from "@/lib/session";
-import { fmtDate } from "@/lib/cert";
 import { initialsOf } from "@/lib/util";
 import { AppNav } from "@/components/AppNav";
-import { Icon, type IconName } from "@/components/Icon";
-import { DashboardTable, type CertRow } from "@/components/DashboardTable";
+import { Icon } from "@/components/Icon";
 import { OrgSwitcher } from "@/components/OrgSwitcher";
+import { DashboardHub, type HubEvent, type HubTemplate } from "@/components/DashboardHub";
 
 export const dynamic = "force-dynamic";
-
-function Stat({ icon, tint, color, value, label }: { icon: IconName; tint: string; color: string; value: string; label: string }) {
-  return (
-    <div className="card" style={{ padding: "20px 22px", display: "flex", alignItems: "center", gap: 16 }}>
-      <div style={{ width: 46, height: 46, borderRadius: 12, background: tint, color, display: "grid", placeItems: "center" }}><Icon name={icon} size={23} /></div>
-      <div>
-        <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.02em" }}>{value}</div>
-        <div className="muted" style={{ fontSize: 13.5, fontWeight: 600 }}>{label}</div>
-      </div>
-    </div>
-  );
-}
 
 export default async function DashboardPage() {
   const ctx = await getSessionContext();
@@ -31,23 +18,22 @@ export default async function DashboardPage() {
   const { wallet, org, orgs } = ctx;
 
   const db = getDb();
-  const [certs, events] = await Promise.all([
-    db.select().from(certificate).where(eq(certificate.companyId, org.id)).orderBy(desc(certificate.createdAt)),
-    db.select({ id: event.id, name: event.name }).from(event).where(eq(event.companyId, org.id)).orderBy(asc(event.name)),
+  const [events, templates, certs] = await Promise.all([
+    db.select({ id: event.id, name: event.name, date: event.date }).from(event).where(eq(event.companyId, org.id)).orderBy(asc(event.name)),
+    db.select({ id: template.id, name: template.name, type: template.type }).from(template).where(eq(template.companyId, org.id)).orderBy(desc(template.createdAt)),
+    db.select({ id: certificate.id, eventId: certificate.eventId, templateId: certificate.templateId }).from(certificate).where(eq(certificate.companyId, org.id)),
   ]);
 
-  const rows: CertRow[] = certs.map((c) => ({
-    id: c.id,
-    recipientName: c.recipientName,
-    eventName: c.eventName || "-",
-    eventId: c.eventId,
-    date: fmtDate(c.issueDate),
-    status: c.status,
-    views: c.views,
-  }));
+  const byEvent = new Map<string, number>();
+  const byTemplate = new Map<string, number>();
+  for (const c of certs) {
+    if (c.eventId) byEvent.set(c.eventId, (byEvent.get(c.eventId) || 0) + 1);
+    if (c.templateId) byTemplate.set(c.templateId, (byTemplate.get(c.templateId) || 0) + 1);
+  }
 
-  const issued = certs.filter((c) => c.status !== "draft").length;
-  const totalViews = certs.reduce((a, c) => a + c.views, 0);
+  const hubEvents: HubEvent[] = events.map((e) => ({ ...e, count: byEvent.get(e.id) || 0 }));
+  const hubTemplates: HubTemplate[] = templates.map((t) => ({ ...t, count: byTemplate.get(t.id) || 0 }));
+
   const isFree = wallet.plan === "free";
   const freeUsed = Math.max(0, 5 - wallet.credits);
   const pct = isFree ? (wallet.credits / 5) * 100 : 100;
@@ -62,18 +48,29 @@ export default async function DashboardPage() {
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 16, marginBottom: 26 }}>
           <div>
             <h1 style={{ fontSize: 30, letterSpacing: "-0.03em" }}>Welcome back, {org.name}</h1>
-            <p className="muted" style={{ marginTop: 6, fontSize: 15.5 }}>Here&apos;s what&apos;s happening with your certificates.</p>
+            <p className="muted" style={{ marginTop: 6, fontSize: 15.5 }}>Manage your organization, events and templates from here.</p>
           </div>
           <div style={{ display: "flex", gap: 10 }}>
-            <Link className="btn btn-ghost" href="/upload"><Icon name="upload" size={18} /> Bulk issue</Link>
-            <Link className="btn btn-primary" href="/customize"><Icon name="plus" size={18} /> New certificate</Link>
+            <Link className="btn btn-ghost" href="/certificates"><Icon name="doc" size={18} /> Issued certificates</Link>
+            <Link className="btn btn-primary" href="/issue"><Icon name="bolt" size={18} /> Issue certificates</Link>
           </div>
         </div>
 
-        <div className="dash-top" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr) 1.3fr", gap: 16, marginBottom: 16 }}>
-          <Stat icon="doc" tint="var(--green-tint)" color="var(--green-700)" value={String(issued)} label="Certificates issued" />
-          <Stat icon="globe" tint="var(--blue-tint)" color="#1d4fb0" value={totalViews.toLocaleString()} label="Verification views" />
-          <Stat icon="shield" tint="var(--gold-tint)" color="#8a6a1e" value="100%" label="Authenticity rate" />
+        <div className="dash-top" style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr 1.3fr", gap: 16, marginBottom: 16 }}>
+          <Link href="/certificates" className="card" style={{ padding: "20px 22px", display: "flex", alignItems: "center", gap: 16 }}>
+            <div style={{ width: 46, height: 46, borderRadius: 12, background: "var(--green-tint)", color: "var(--green-700)", display: "grid", placeItems: "center" }}><Icon name="doc" size={23} /></div>
+            <div>
+              <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.02em" }}>{certs.length}</div>
+              <div className="muted" style={{ fontSize: 13.5, fontWeight: 600 }}>Certificates issued</div>
+            </div>
+          </Link>
+          <div className="card" style={{ padding: "20px 22px", display: "flex", alignItems: "center", gap: 16 }}>
+            <div style={{ width: 46, height: 46, borderRadius: 12, background: "var(--blue-tint)", color: "#1d4fb0", display: "grid", placeItems: "center" }}><Icon name="cal" size={23} /></div>
+            <div>
+              <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.02em" }}>{events.length} · {templates.length}</div>
+              <div className="muted" style={{ fontSize: 13.5, fontWeight: 600 }}>Events · templates</div>
+            </div>
+          </div>
 
           <div className="card" style={{ padding: "20px 22px", background: "linear-gradient(135deg,#0F1B2D,#1d2f48)", color: "#fff", border: "none" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -96,7 +93,7 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <DashboardTable certs={rows} events={events} />
+        <DashboardHub events={hubEvents} templates={hubTemplates} />
       </div>
     </>
   );

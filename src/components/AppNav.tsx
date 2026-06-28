@@ -8,8 +8,9 @@ import { signOut } from "@/lib/auth-client";
 
 const items: { href: string; label: string; icon: IconName }[] = [
   { href: "/dashboard", label: "Dashboard", icon: "grid" },
-  { href: "/customize", label: "Customizer", icon: "sliders" },
-  { href: "/upload", label: "Bulk issue", icon: "upload" },
+  { href: "/certificates", label: "Issued Certificates", icon: "doc" },
+  { href: "/customize", label: "Templates", icon: "sliders" },
+  { href: "/issue", label: "Issue", icon: "bolt" },
   { href: "/billing", label: "Billing", icon: "coins" },
 ];
 
@@ -58,8 +59,8 @@ export function AppNav({
           <Link href="/billing" style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 12px", borderRadius: 99, background: "var(--gold-tint)", color: "#8a6a1e", fontWeight: 700, fontSize: 13.5 }}>
             <Icon name="coins" size={16} /> {credits} credits
           </Link>
-          <Link className="btn btn-primary btn-sm" href="/customize">
-            <Icon name="plus" size={16} /> New
+          <Link className="btn btn-primary btn-sm" href="/issue">
+            <Icon name="plus" size={16} /> Issue
           </Link>
           <button onClick={logout} title="Log out" style={{ width: 36, height: 36, borderRadius: 99, background: "var(--ink)", color: "#fff", display: "grid", placeItems: "center", fontWeight: 700, fontSize: 14 }}>
             {initials}
