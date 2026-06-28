@@ -176,8 +176,8 @@ export function CustomizerClient({
           <div style={{ padding: "18px 20px", borderBottom: "1px solid var(--line)", position: "sticky", top: 0, background: "#fff", zIndex: 5 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div>
-                <div className="eyebrow">Customizer</div>
-                <h2 style={{ fontSize: 19, marginTop: 3 }}>Design your certificate</h2>
+                <div className="eyebrow">Templates</div>
+                <h2 style={{ fontSize: 19, marginTop: 3 }}>Design a template</h2>
               </div>
               <button onClick={() => router.push("/dashboard")} style={{ color: "var(--ink-4)" }}><Icon name="x" size={20} /></button>
             </div>
@@ -414,8 +414,9 @@ export function CustomizerClient({
             )}
           </Section>
 
-          <div style={{ padding: 20 }}>
-            <button onClick={() => router.push("/preview")} className="btn btn-primary btn-block btn-lg">Continue to preview <Icon name="arrow" size={18} /></button>
+          <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 10 }}>
+            <button onClick={saveTemplate} className="btn btn-primary btn-block btn-lg"><Icon name="copy" size={18} /> Save as template</button>
+            <p className="muted" style={{ fontSize: 12.5, textAlign: "center" }}>Templates are reusable designs. Issue certificates from the <strong>Issue</strong> tab.</p>
           </div>
         </div>
 

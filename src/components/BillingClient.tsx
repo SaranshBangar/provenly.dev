@@ -8,6 +8,8 @@ import { Seal } from "./Seal";
 const MIN = 50;
 const QUICK = [50, 200, 500, 1000];
 
+export type TopUp = { id: string; amountInr: number; credits: number; status: "created" | "paid" | "failed"; date: string };
+
 declare global {
   interface Window {
     Cashfree?: (opts: { mode: string }) => { checkout: (o: { paymentSessionId: string; redirectTarget?: string }) => void };
@@ -25,23 +27,32 @@ function loadCashfreeSdk(): Promise<void> {
   });
 }
 
+const STATUS_STYLE: Record<TopUp["status"], { label: string; bg: string; fg: string }> = {
+  paid: { label: "Paid", bg: "var(--green-tint)", fg: "var(--green-700)" },
+  created: { label: "Pending", bg: "var(--gold-tint)", fg: "#8a6a1e" },
+  failed: { label: "Failed", bg: "var(--danger-tint)", fg: "var(--danger)" },
+};
+
 export function BillingClient({
   credits,
   initials,
   plan,
   configured,
   status,
+  topUps,
 }: {
   credits: number;
   initials: string;
   plan: "free" | "pro";
   configured: boolean;
   status: "success" | "error" | null;
+  topUps: TopUp[];
 }) {
   const router = useRouter();
   const [amount, setAmount] = useState(200);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showHistory, setShowHistory] = useState(false);
 
   const valid = Number.isFinite(amount) && amount >= MIN;
 
@@ -222,9 +233,52 @@ export function BillingClient({
                 </div>
               ))}
             </div>
+            <button className="btn btn-ghost btn-block" onClick={() => setShowHistory(true)}>
+              <Icon name="rows" size={16} /> View past top-ups
+            </button>
           </div>
         </div>
       </div>
+
+      {showHistory && (
+        <div
+          onClick={() => setShowHistory(false)}
+          style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(15,27,45,.45)", backdropFilter: "blur(3px)", display: "grid", placeItems: "center", padding: 20 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="card"
+            style={{ width: "100%", maxWidth: 520, maxHeight: "82vh", display: "flex", flexDirection: "column", overflow: "hidden", padding: 0 }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "18px 20px", borderBottom: "1px solid var(--line)" }}>
+              <div style={{ flex: 1 }}>
+                <h2 style={{ fontSize: 18 }}>Past top-ups</h2>
+                <p className="muted" style={{ fontSize: 13 }}>Your credit purchase history.</p>
+              </div>
+              <button onClick={() => setShowHistory(false)} style={{ color: "var(--ink-4)" }}><Icon name="x" size={20} /></button>
+            </div>
+            <div className="scroll" style={{ overflowY: "auto" }}>
+              {topUps.length === 0 ? (
+                <div style={{ padding: 48, textAlign: "center", color: "var(--ink-4)", fontSize: 14 }}>No top-ups yet. Your purchases will show up here.</div>
+              ) : (
+                topUps.map((t) => {
+                  const st = STATUS_STYLE[t.status];
+                  return (
+                    <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 20px", borderTop: "1px solid var(--line)" }}>
+                      <div style={{ width: 38, height: 38, borderRadius: 10, background: "var(--gold-tint)", color: "#8a6a1e", display: "grid", placeItems: "center", flex: "0 0 auto" }}><Icon name="coins" size={19} /></div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 15 }}>₹{t.amountInr.toLocaleString("en-IN")}</div>
+                        <div className="muted" style={{ fontSize: 12.5 }}>{t.date} · {t.credits} credits</div>
+                      </div>
+                      <span className="chip" style={{ background: st.bg, color: st.fg }}>{st.label}</span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
