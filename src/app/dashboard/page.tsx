@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { eq, asc, desc } from "drizzle-orm";
+import { and, eq, asc, desc, sql } from "drizzle-orm";
 import { getDb } from "@/db";
-import { certificate, event, template } from "@/db/schema";
+import { certificate, event, payment, template } from "@/db/schema";
 import { getSessionContext } from "@/lib/session";
 import { initialsOf } from "@/lib/util";
 import { AppNav } from "@/components/AppNav";
@@ -18,10 +18,11 @@ export default async function DashboardPage() {
   const { wallet, org, orgs } = ctx;
 
   const db = getDb();
-  const [events, templates, certs] = await Promise.all([
+  const [events, templates, certs, paid] = await Promise.all([
     db.select({ id: event.id, name: event.name, date: event.date }).from(event).where(eq(event.companyId, org.id)).orderBy(asc(event.name)),
     db.select({ id: template.id, name: template.name, type: template.type }).from(template).where(eq(template.companyId, org.id)).orderBy(desc(template.createdAt)),
     db.select({ id: certificate.id, eventId: certificate.eventId, templateId: certificate.templateId }).from(certificate).where(eq(certificate.companyId, org.id)),
+    db.select({ total: sql<number>`coalesce(sum(${payment.credits}), 0)` }).from(payment).where(and(eq(payment.walletId, wallet.id), eq(payment.status, "paid"))),
   ]);
 
   const byEvent = new Map<string, number>();
@@ -36,7 +37,9 @@ export default async function DashboardPage() {
 
   const isFree = wallet.plan === "free";
   const freeUsed = Math.max(0, 5 - wallet.credits);
-  const pct = isFree ? (wallet.credits / 5) * 100 : 100;
+  const bought = paid[0]?.total ?? 0; // credits ever purchased
+  const totalCredits = 5 + bought; // 5 free at signup + everything bought
+  const pct = isFree ? (wallet.credits / 5) * 100 : totalCredits ? (wallet.credits / totalCredits) * 100 : 100;
 
   return (
     <>
@@ -81,14 +84,14 @@ export default async function DashboardPage() {
               <Link className="tlink" href="/billing" style={{ color: "#7fe3bc", fontSize: 13 }}>{isFree ? "Upgrade" : "Top up"}</Link>
             </div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 14 }}>
-              <span style={{ fontSize: 28, fontWeight: 800 }}>{wallet.credits}</span>
-              <span style={{ color: "rgba(255,255,255,.6)", fontSize: 14 }}>{isFree ? `/ 5 free credits left` : "credits remaining"}</span>
+              <span style={{ fontSize: 28, fontWeight: 800 }}>{isFree ? wallet.credits : `${wallet.credits} / ${totalCredits}`}</span>
+              <span style={{ color: "rgba(255,255,255,.6)", fontSize: 14 }}>{isFree ? `/ 5 free credits left` : "available / total credits"}</span>
             </div>
             <div style={{ height: 8, borderRadius: 99, background: "rgba(255,255,255,.16)", marginTop: 12, overflow: "hidden" }}>
               <div style={{ height: "100%", width: `${pct}%`, background: "linear-gradient(90deg,var(--green),#3ddc9a)", borderRadius: 99, transition: "width 1s" }} />
             </div>
             <div style={{ fontSize: 12.5, color: "rgba(255,255,255,.55)", marginTop: 10 }}>
-              {isFree ? `${freeUsed} of 5 used · verifying is always free` : "₹1 = 1 credit · top up anytime"}
+              {isFree ? `${freeUsed} of 5 used · verifying is always free` : `${bought} bought + 5 free · ₹1 = 1 credit`}
             </div>
           </div>
         </div>

@@ -9,6 +9,7 @@ import { QRCode } from "./QRCode";
 import { useCertDraft } from "@/lib/use-cert-draft";
 import { genSerial, verifyUrl, verifyDisplay, getCertMeta, setCertMeta } from "@/lib/cert";
 import { CertElementsLayer } from "./CertElementsLayer";
+import { useDialog } from "./Dialog";
 import type { CertData, CertElement } from "@/db/schema";
 
 const BRAND_SWATCHES = ["#0E9F6E", "#2E6FE6", "#7C3AED", "#C79A3A", "#D4543B", "#0F1B2D", "#0891B2", "#DB2777"];
@@ -87,7 +88,7 @@ function TagEditor({ tags, onChange }: { tags: string[]; onChange: (v: string[])
 }
 
 type PickEvent = { id: string; name: string };
-type PickTemplate = { id: string; name: string; type: string; data: CertData };
+type PickTemplate = { id: string; name: string; type: string; eventId: string | null; data: CertData };
 
 export function CustomizerClient({
   credits,
@@ -102,12 +103,14 @@ export function CustomizerClient({
   templates?: PickTemplate[];
 }) {
   const router = useRouter();
+  const dialog = useDialog();
   const { cert, update, setCert } = useCertDraft();
   const [open, setOpen] = useState("template");
   const [zoom, setZoom] = useState(1);
   const [flash, setFlash] = useState(false);
   const [origin, setOrigin] = useState("");
   const [selEl, setSelEl] = useState<string | null>(null);
+  const [preview, setPreview] = useState<PickTemplate | null>(null);
   const [meta, setMeta] = useState<{ eventId: string | null; templateId: string | null }>({ eventId: null, templateId: null });
   const toggle = (k: string) => setOpen((o) => (o === k ? "" : k));
 
@@ -130,7 +133,7 @@ export function CustomizerClient({
 
   // ---- Events & templates ----
   const createEvent = async () => {
-    const name = window.prompt("New event name");
+    const name = await dialog.prompt("Name your event (e.g. Annual Hackathon 2026)", "", { title: "New event", placeholder: "Event name", confirmLabel: "Create" });
     if (!name?.trim()) return;
     try {
       const res = await fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name.trim() }) });
@@ -139,20 +142,28 @@ export function CustomizerClient({
       updateMeta({ ...meta, eventId: j.id || null });
       update({ eventName: name.trim() });
       router.refresh();
-    } catch (e) { alert(e instanceof Error && e.message ? e.message : "Could not create event."); }
+    } catch (e) { await dialog.alert(e instanceof Error && e.message ? e.message : "Could not create event.", { title: "Couldn't create event" }); }
   };
-  const loadTemplate = (t: PickTemplate) => { setCert({ ...t.data, serial: cert.serial }); updateMeta({ ...meta, templateId: t.id }); };
-  const saveTemplate = async () => {
-    const name = window.prompt("Template name (e.g. Winner, Participation)");
+  const loadTemplate = (t: PickTemplate) => { setCert({ ...t.data, serial: cert.serial }); updateMeta({ eventId: t.eventId, templateId: t.id }); if (t.eventId) update({ eventName: events.find((e) => e.id === t.eventId)?.name || cert.eventName }); };
+  // Save the current design (or an explicit payload, for copies) as a template
+  // belonging to an event. Templates depend on events, so an event is required.
+  const saveTemplate = async (opts?: { name?: string; type?: string; cert?: CertData; eventId?: string | null }) => {
+    const evId = opts?.eventId ?? meta.eventId;
+    if (!evId) { await dialog.alert("Choose an event for this template first, or create one in the Event & template section.", { title: "Pick an event" }); setOpen("evt"); return; }
+    const name = await dialog.prompt("Template name (e.g. Winner, Participation)", opts?.name || "", { title: "Save template", placeholder: "Template name", confirmLabel: "Save" });
     if (!name?.trim()) return;
-    const type = window.prompt("Type label", "participation") || "participation";
+    const type = (await dialog.prompt("Type label", opts?.type || "participation", { title: "Template type", placeholder: "participation" })) || "participation";
     try {
-      const res = await fetch("/api/templates", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name.trim(), type, cert }) });
-      if (!res.ok) throw new Error();
+      const res = await fetch("/api/templates", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name.trim(), type, eventId: evId, cert: opts?.cert ?? cert }) });
+      const j = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(j?.error);
       router.refresh();
-      alert("Template saved to this organization.");
-    } catch { alert("Could not save template."); }
+      dialog.toast("Template saved.");
+    } catch (e) { await dialog.alert(e instanceof Error && e.message ? e.message : "Could not save template.", { title: "Couldn't save" }); }
   };
+  // Duplicate an existing template into the same event (keeps designs consistent).
+  const copyTemplate = (t: PickTemplate) => saveTemplate({ name: `${t.name} (copy)`, type: t.type, cert: t.data, eventId: t.eventId });
+  const visibleTemplates = meta.eventId ? templates.filter((t) => t.eventId === meta.eventId) : [];
 
   useEffect(() => setOrigin(window.location.origin), []);
   useEffect(() => {
@@ -166,6 +177,21 @@ export function CustomizerClient({
     update((c) => ({ signatures: c.signatures.map((s, j) => (j === i ? { ...s, ...patch } : s)) }));
   const setCF = (i: number, patch: Partial<CertData["customFields"][number]>) =>
     update((c) => ({ customFields: c.customFields.map((f, j) => (j === i ? { ...f, ...patch } : f)) }));
+
+  // Templates depend on events — require at least one event before designing.
+  if (events.length === 0) {
+    return (
+      <>
+        <AppNav credits={credits} initials={initials} />
+        <div style={{ maxWidth: 560, margin: "0 auto", padding: "80px 22px", textAlign: "center" }}>
+          <div style={{ width: 56, height: 56, borderRadius: 14, background: "var(--green-tint)", color: "var(--green-700)", display: "grid", placeItems: "center", margin: "0 auto 18px" }}><Icon name="cal" size={28} /></div>
+          <h1 style={{ fontSize: 26, letterSpacing: "-0.02em" }}>Create an event first</h1>
+          <p className="muted" style={{ fontSize: 15, marginTop: 8, marginBottom: 22 }}>Templates belong to an event so your certificates stay grouped by program or cohort. Make your first event to start designing.</p>
+          <button className="btn btn-primary btn-lg" onClick={createEvent}><Icon name="plus" size={18} /> Create your first event</button>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -313,27 +339,31 @@ export function CustomizerClient({
             <div className="field"><label>Event</label>
               <div style={{ display: "flex", gap: 8 }}>
                 <select className="select" value={meta.eventId || ""} onChange={(e) => { const ev = events.find((x) => x.id === e.target.value); updateMeta({ ...meta, eventId: e.target.value || null }); if (ev) update({ eventName: ev.name }); }} style={{ height: 44, flex: 1 }}>
-                  <option value="">No event</option>
+                  <option value="">Select an event…</option>
                   {events.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}
                 </select>
                 <button onClick={createEvent} className="btn btn-ghost" style={{ flex: "0 0 auto", height: 44 }}><Icon name="plus" size={16} /> New</button>
               </div>
               <p className="muted" style={{ fontSize: 12 }}>Certificates are filterable by event on your dashboard.</p>
             </div>
-            <div className="field"><label>Saved templates</label>
-              {templates.length === 0 ? (
-                <p className="muted" style={{ fontSize: 13 }}>No templates yet. Design a certificate, then save it as a reusable type.</p>
+            <div className="field"><label>Templates in this event</label>
+              {!meta.eventId ? (
+                <p className="muted" style={{ fontSize: 13 }}>Select an event above to view and reuse its templates.</p>
+              ) : visibleTemplates.length === 0 ? (
+                <p className="muted" style={{ fontSize: 13 }}>No templates in this event yet. Design a certificate, then save it below.</p>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                  {templates.map((t) => (
-                    <button key={t.id} onClick={() => loadTemplate(t)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${meta.templateId === t.id ? "var(--green)" : "var(--line-2)"}`, background: meta.templateId === t.id ? "var(--green-tint)" : "#fff", textAlign: "left" }}>
-                      <span style={{ flex: 1 }}><span style={{ fontWeight: 700, fontSize: 14 }}>{t.name}</span> <span className="muted" style={{ fontSize: 12 }}>· {t.type}</span></span>
-                      <span className="tlink" style={{ fontSize: 12.5, color: "var(--green-700)" }}>Use</span>
-                    </button>
+                  {visibleTemplates.map((t) => (
+                    <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", borderRadius: 10, border: `1.5px solid ${meta.templateId === t.id ? "var(--green)" : "var(--line-2)"}`, background: meta.templateId === t.id ? "var(--green-tint)" : "#fff" }}>
+                      <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><span style={{ fontWeight: 700, fontSize: 14 }}>{t.name}</span> <span className="muted" style={{ fontSize: 12 }}>· {t.type}</span></span>
+                      <button onClick={() => loadTemplate(t)} className="tlink" style={{ fontSize: 12.5, color: "var(--green-700)", fontWeight: 600 }}>Use</button>
+                      <button onClick={() => setPreview(t)} className="tlink" style={{ fontSize: 12.5, color: "var(--blue)", fontWeight: 600 }}>View</button>
+                      <button onClick={() => copyTemplate(t)} title="Duplicate in this event" style={{ color: "var(--ink-4)", display: "flex", padding: 2 }}><Icon name="copy" size={15} /></button>
+                    </div>
                   ))}
                 </div>
               )}
-              <button onClick={saveTemplate} className="btn btn-ghost btn-sm" style={{ alignSelf: "flex-start", marginTop: 8 }}><Icon name="copy" size={15} /> Save current design as template</button>
+              <button onClick={() => saveTemplate()} className="btn btn-ghost btn-sm" style={{ alignSelf: "flex-start", marginTop: 8 }}><Icon name="copy" size={15} /> Save current design as template</button>
             </div>
           </Section>
 
@@ -415,7 +445,7 @@ export function CustomizerClient({
           </Section>
 
           <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 10 }}>
-            <button onClick={saveTemplate} className="btn btn-primary btn-block btn-lg"><Icon name="copy" size={18} /> Save as template</button>
+            <button onClick={() => saveTemplate()} className="btn btn-primary btn-block btn-lg"><Icon name="copy" size={18} /> Save as template</button>
             <p className="muted" style={{ fontSize: 12.5, textAlign: "center" }}>Templates are reusable designs. Issue certificates from the <strong>Issue</strong> tab.</p>
           </div>
         </div>
@@ -445,6 +475,22 @@ export function CustomizerClient({
           </div>
         </div>
       </div>
+
+      {preview && (
+        <div onMouseDown={(e) => { if (e.target === e.currentTarget) setPreview(null); }} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(15,27,45,.45)", backdropFilter: "blur(3px)", display: "grid", placeItems: "center", padding: 24, animation: "pop-in .15s ease both" }}>
+          <div className="card" style={{ width: "100%", maxWidth: 760, padding: 18, boxShadow: "0 24px 60px rgba(0,0,0,.28)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <div><div className="eyebrow">Template preview</div><h3 style={{ fontSize: 17 }}>{preview.name} <span className="muted" style={{ fontWeight: 400, fontSize: 13 }}>· {preview.type}</span></h3></div>
+              <button onClick={() => setPreview(null)} style={{ color: "var(--ink-4)" }}><Icon name="x" size={20} /></button>
+            </div>
+            <CertificateFrame cert={preview.data} verifyUrl={verifyUrl(preview.data.serial, origin || undefined)} />
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 14 }}>
+              <button className="btn btn-ghost" onClick={() => { copyTemplate(preview); setPreview(null); }}><Icon name="copy" size={16} /> Copy</button>
+              <button className="btn btn-primary" onClick={() => { loadTemplate(preview); setPreview(null); }}>Use this template</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

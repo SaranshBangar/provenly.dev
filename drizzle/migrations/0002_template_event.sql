@@ -1,0 +1,1 @@
+ALTER TABLE `template` ADD `event_id` text REFERENCES event(id) ON DELETE cascade;

@@ -14,7 +14,7 @@ export default async function CustomizePage() {
   const db = getDb();
   const [events, templates] = await Promise.all([
     db.select({ id: event.id, name: event.name }).from(event).where(eq(event.companyId, ctx.org.id)).orderBy(asc(event.name)),
-    db.select({ id: template.id, name: template.name, type: template.type, data: template.data }).from(template).where(eq(template.companyId, ctx.org.id)).orderBy(desc(template.createdAt)),
+    db.select({ id: template.id, name: template.name, type: template.type, eventId: template.eventId, data: template.data }).from(template).where(eq(template.companyId, ctx.org.id)).orderBy(desc(template.createdAt)),
   ]);
   return (
     <CustomizerClient

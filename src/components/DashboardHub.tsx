@@ -3,6 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Icon } from "./Icon";
+import { useDialog } from "./Dialog";
 
 export type HubEvent = { id: string; name: string; date: string | null; count: number };
 export type HubTemplate = { id: string; name: string; type: string; count: number };
@@ -25,19 +26,20 @@ function Panel({ icon, title, sub, action, children }: { icon: React.ComponentPr
 
 export function DashboardHub({ events, templates }: { events: HubEvent[]; templates: HubTemplate[] }) {
   const router = useRouter();
+  const dialog = useDialog();
   const [busy, setBusy] = useState<string | null>(null);
 
   const createEvent = async () => {
-    const name = window.prompt("New event name");
+    const name = await dialog.prompt("Name your event (e.g. Annual Hackathon 2026)", "", { title: "New event", placeholder: "Event name", confirmLabel: "Continue" });
     if (!name?.trim()) return;
-    const date = window.prompt("Event date (optional, e.g. 2026-07-01)") || "";
+    const date = (await dialog.prompt("Event date (optional)", "", { title: "Event date", placeholder: "2026-07-01", confirmLabel: "Create" })) || "";
     setBusy("event:new");
     try {
       const res = await fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name.trim(), date: date.trim() }) });
       if (!res.ok) throw new Error((((await res.json().catch(() => ({}))) as { error?: string }).error) || "");
       router.refresh();
     } catch (e) {
-      alert(e instanceof Error && e.message ? e.message : "Could not create event.");
+      await dialog.alert(e instanceof Error && e.message ? e.message : "Could not create event.", { title: "Couldn't create event" });
     } finally {
       setBusy(null);
     }
@@ -45,15 +47,19 @@ export function DashboardHub({ events, templates }: { events: HubEvent[]; templa
 
   const del = async (kind: "events" | "templates", id: string, name: string, count: number) => {
     const noun = kind === "events" ? "event" : "template";
-    if (count > 0 && !window.confirm(`${name} is used by ${count} certificate${count === 1 ? "" : "s"}. Deleting the ${noun} won't remove those certificates, but they'll lose this link. Continue?`)) return;
-    if (count === 0 && !window.confirm(`Delete ${noun} "${name}"?`)) return;
+    const extra = kind === "events" ? " Its templates will also be deleted." : "";
+    const msg =
+      count > 0
+        ? `${name} is used by ${count} certificate${count === 1 ? "" : "s"}. Deleting the ${noun} won't remove those certificates, but they'll lose this link.${extra} Continue?`
+        : `Delete ${noun} "${name}"?${extra}`;
+    if (!(await dialog.confirm(msg, { title: `Delete ${noun}`, confirmLabel: "Delete", danger: true }))) return;
     setBusy(`${kind}:${id}`);
     try {
       const res = await fetch(`/api/${kind}?id=${encodeURIComponent(id)}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
       router.refresh();
     } catch {
-      alert(`Could not delete ${noun}.`);
+      await dialog.alert(`Could not delete ${noun}.`, { title: "Couldn't delete" });
     } finally {
       setBusy(null);
     }

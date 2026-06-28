@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Icon, type IconName } from "./Icon";
+import { useDialog } from "./Dialog";
 import { avatarColor, initialsOf } from "@/lib/util";
 
 export type CertRow = {
@@ -25,6 +26,7 @@ const PAGE_SIZES = [10, 20, 50, 100];
 
 export function DashboardTable({ certs, events = [] }: { certs: CertRow[]; events?: { id: string; name: string }[] }) {
   const router = useRouter();
+  const dialog = useDialog();
   const [filter, setFilter] = useState<"all" | CertRow["status"]>("all");
   const [eventFilter, setEventFilter] = useState<string>("all");
   const [q, setQ] = useState("");
@@ -53,9 +55,10 @@ export function DashboardTable({ certs, events = [] }: { certs: CertRow[]; event
     const revoking = c.status !== "revoked";
     if (
       revoking &&
-      !window.confirm(
+      !(await dialog.confirm(
         `Revoke the certificate for ${c.recipientName}?\n\nIts public verify page will immediately show as "revoked". You can restore it to normal later.`,
-      )
+        { title: "Revoke certificate", confirmLabel: "Revoke", danger: true },
+      ))
     )
       return;
     setBusy(c.id);
@@ -68,7 +71,7 @@ export function DashboardTable({ certs, events = [] }: { certs: CertRow[]; event
       if (!res.ok) throw new Error();
       router.refresh();
     } catch {
-      alert("Could not update the certificate. Please try again.");
+      await dialog.alert("Could not update the certificate. Please try again.", { title: "Something went wrong" });
     } finally {
       setBusy(null);
     }

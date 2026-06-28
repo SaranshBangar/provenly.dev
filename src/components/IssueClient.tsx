@@ -8,7 +8,7 @@ import { CertificateFrame } from "./CertificateFrame";
 import { verifyUrl } from "@/lib/cert";
 import type { CertData } from "@/db/schema";
 
-type Tpl = { id: string; name: string; type: string; data: CertData };
+type Tpl = { id: string; name: string; type: string; eventId: string | null; data: CertData };
 type Evt = { id: string; name: string };
 
 export function IssueClient({
@@ -23,18 +23,25 @@ export function IssueClient({
   templates: Tpl[];
 }) {
   const router = useRouter();
-  const [tplId, setTplId] = useState(templates[0]?.id || "");
+  const [eventId, setEventId] = useState(events[0]?.id || "");
+  // Templates belong to events — the chosen event drives which templates are offered.
+  const evTemplates = useMemo(() => (eventId ? templates.filter((t) => t.eventId === eventId) : templates), [eventId, templates]);
+  const [tplId, setTplId] = useState(() => {
+    const first = events[0]?.id;
+    const list = first ? templates.filter((t) => t.eventId === first) : templates;
+    return list[0]?.id || "";
+  });
   const [mode, setMode] = useState<"single" | "bulk">("single");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [names, setNames] = useState("");
-  const [eventId, setEventId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<{ issued: number; id?: string } | null>(null);
 
-  const tpl = templates.find((t) => t.id === tplId) || null;
+  const tpl = evTemplates.find((t) => t.id === tplId) || null;
   const ev = events.find((e) => e.id === eventId) || null;
+  const pickEvent = (id: string) => { setEventId(id); const list = id ? templates.filter((t) => t.eventId === id) : templates; setTplId(list[0]?.id || ""); };
 
   const bulkNames = useMemo(
     () => names.split("\n").map((n) => n.trim()).filter(Boolean),
@@ -113,18 +120,21 @@ export function IssueClient({
           <div className="prev-grid" style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 24, marginTop: 24, alignItems: "start" }}>
             <div className="card" style={{ padding: 26 }}>
               <div className="field">
-                <label>Template</label>
-                <select className="select" value={tplId} onChange={(e) => setTplId(e.target.value)} style={{ height: 46 }}>
-                  {templates.map((t) => <option key={t.id} value={t.id}>{t.name} · {t.type}</option>)}
+                <label>Event</label>
+                <select className="select" value={eventId} onChange={(e) => pickEvent(e.target.value)} style={{ height: 46 }}>
+                  {events.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
                 </select>
               </div>
 
               <div className="field">
-                <label>Event <span className="muted" style={{ fontWeight: 400 }}>(optional)</span></label>
-                <select className="select" value={eventId} onChange={(e) => setEventId(e.target.value)} style={{ height: 46 }}>
-                  <option value="">No event</option>
-                  {events.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
-                </select>
+                <label>Template</label>
+                {evTemplates.length === 0 ? (
+                  <p className="muted" style={{ fontSize: 13 }}>No templates in this event yet. <Link href="/customize" className="tlink" style={{ color: "var(--green-700)", fontWeight: 600 }}>Design one</Link>.</p>
+                ) : (
+                  <select className="select" value={tplId} onChange={(e) => setTplId(e.target.value)} style={{ height: 46 }}>
+                    {evTemplates.map((t) => <option key={t.id} value={t.id}>{t.name} · {t.type}</option>)}
+                  </select>
+                )}
               </div>
 
               <div className="field">

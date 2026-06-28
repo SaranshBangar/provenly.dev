@@ -2,11 +2,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "./Icon";
+import { useDialog } from "./Dialog";
 
 export type Org = { id: string; name: string };
 
 export function OrgSwitcher({ orgs, currentId }: { orgs: Org[]; currentId: string }) {
   const router = useRouter();
+  const dialog = useDialog();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -29,14 +31,14 @@ export function OrgSwitcher({ orgs, currentId }: { orgs: Org[]; currentId: strin
       setOpen(false);
       router.refresh();
     } catch {
-      alert("Could not switch organization.");
+      await dialog.alert("Could not switch organization.", { title: "Something went wrong" });
     } finally {
       setBusy(false);
     }
   };
 
   const create = async () => {
-    const name = window.prompt("New organization name");
+    const name = await dialog.prompt("Name your organization", "", { title: "New organization", placeholder: "Organization name", confirmLabel: "Create" });
     if (!name?.trim()) return;
     setBusy(true);
     try {
@@ -45,7 +47,7 @@ export function OrgSwitcher({ orgs, currentId }: { orgs: Org[]; currentId: strin
       setOpen(false);
       router.refresh();
     } catch (e) {
-      alert(e instanceof Error && e.message ? e.message : "Could not create organization.");
+      await dialog.alert(e instanceof Error && e.message ? e.message : "Could not create organization.", { title: "Couldn't create organization" });
     } finally {
       setBusy(false);
     }

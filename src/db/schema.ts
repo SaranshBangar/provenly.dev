@@ -100,6 +100,9 @@ export const template = sqliteTable("template", {
   companyId: text("company_id")
     .notNull()
     .references(() => company.id, { onDelete: "cascade" }),
+  // Templates depend on events: each belongs to one event. Nullable in the DB so
+  // pre-existing rows survive the migration; required for newly created templates.
+  eventId: text("event_id").references(() => event.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   type: text("type").notNull().default("participation"),
   data: text("data", { mode: "json" }).$type<CertData>().notNull(),
