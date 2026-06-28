@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Icon } from "./Icon";
 import { AppNav } from "./AppNav";
 import { Seal } from "./Seal";
+import Image from "next/image";
 
 const MIN = 50;
 const QUICK = [50, 200, 500, 1000];
@@ -218,7 +219,6 @@ export function BillingClient({
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div className="card" style={{ padding: 20, background: "linear-gradient(135deg,#0F1B2D,#1d2f48)", color: "#fff", border: "none" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                <Seal size={40} drawCheck={false} />
                 <span style={{ fontWeight: 700 }}>{plan === "pro" ? "Pro plan" : "Free plan"}</span>
               </div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
@@ -227,11 +227,13 @@ export function BillingClient({
               </div>
             </div>
             <div className="card" style={{ padding: 18 }}>
-              {["₹1 = 1 certificate credit", "Credits never expire", "Verification is always free", "Shared across all your organizations"].map((t) => (
-                <div key={t} style={{ display: "flex", alignItems: "center", gap: 9, padding: "7px 0", fontSize: 13.5, fontWeight: 500 }}>
-                  <Icon name="check" size={16} style={{ color: "var(--green)" }} /> {t}
-                </div>
-              ))}
+              {["₹1 = 1 certificate credit", "Credits never expire", "Verification is always free", "Shared across all your organizations"].map(
+                (t) => (
+                  <div key={t} style={{ display: "flex", alignItems: "center", gap: 9, padding: "7px 0", fontSize: 13.5, fontWeight: 500 }}>
+                    <Icon name="check" size={16} style={{ color: "var(--green)" }} /> {t}
+                  </div>
+                ),
+              )}
             </div>
             <button className="btn btn-ghost btn-block" onClick={() => setShowHistory(true)}>
               <Icon name="rows" size={16} /> View past top-ups
@@ -243,7 +245,16 @@ export function BillingClient({
       {showHistory && (
         <div
           onClick={() => setShowHistory(false)}
-          style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(15,27,45,.45)", backdropFilter: "blur(3px)", display: "grid", placeItems: "center", padding: 20 }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 100,
+            background: "rgba(15,27,45,.45)",
+            backdropFilter: "blur(3px)",
+            display: "grid",
+            placeItems: "center",
+            padding: 20,
+          }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -253,24 +264,50 @@ export function BillingClient({
             <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "18px 20px", borderBottom: "1px solid var(--line)" }}>
               <div style={{ flex: 1 }}>
                 <h2 style={{ fontSize: 18 }}>Past top-ups</h2>
-                <p className="muted" style={{ fontSize: 13 }}>Your credit purchase history.</p>
+                <p className="muted" style={{ fontSize: 13 }}>
+                  Your credit purchase history.
+                </p>
               </div>
-              <button onClick={() => setShowHistory(false)} style={{ color: "var(--ink-4)" }}><Icon name="x" size={20} /></button>
+              <button onClick={() => setShowHistory(false)} style={{ color: "var(--ink-4)" }}>
+                <Icon name="x" size={20} />
+              </button>
             </div>
             <div className="scroll" style={{ overflowY: "auto" }}>
               {topUps.length === 0 ? (
-                <div style={{ padding: 48, textAlign: "center", color: "var(--ink-4)", fontSize: 14 }}>No top-ups yet. Your purchases will show up here.</div>
+                <div style={{ padding: 48, textAlign: "center", color: "var(--ink-4)", fontSize: 14 }}>
+                  No top-ups yet. Your purchases will show up here.
+                </div>
               ) : (
                 topUps.map((t) => {
                   const st = STATUS_STYLE[t.status];
                   return (
-                    <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 20px", borderTop: "1px solid var(--line)" }}>
-                      <div style={{ width: 38, height: 38, borderRadius: 10, background: "var(--gold-tint)", color: "#8a6a1e", display: "grid", placeItems: "center", flex: "0 0 auto" }}><Icon name="coins" size={19} /></div>
+                    <div
+                      key={t.id}
+                      style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 20px", borderTop: "1px solid var(--line)" }}
+                    >
+                      <div
+                        style={{
+                          width: 38,
+                          height: 38,
+                          borderRadius: 10,
+                          background: "var(--gold-tint)",
+                          color: "#8a6a1e",
+                          display: "grid",
+                          placeItems: "center",
+                          flex: "0 0 auto",
+                        }}
+                      >
+                        <Icon name="coins" size={19} />
+                      </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 700, fontSize: 15 }}>₹{t.amountInr.toLocaleString("en-IN")}</div>
-                        <div className="muted" style={{ fontSize: 12.5 }}>{t.date} · {t.credits} credits</div>
+                        <div className="muted" style={{ fontSize: 12.5 }}>
+                          {t.date} · {t.credits} credits
+                        </div>
                       </div>
-                      <span className="chip" style={{ background: st.bg, color: st.fg }}>{st.label}</span>
+                      <span className="chip" style={{ background: st.bg, color: st.fg }}>
+                        {st.label}
+                      </span>
                     </div>
                   );
                 })
